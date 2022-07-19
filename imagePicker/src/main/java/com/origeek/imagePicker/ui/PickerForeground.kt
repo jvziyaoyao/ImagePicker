@@ -53,7 +53,6 @@ fun PickerForeground(
     onTabSize: (IntSize) -> Unit,
     commit: () -> Unit,
 ) {
-    val surfaceColor = Color.White
     val maskerColor = Color.Black.copy(0.4f)
     var bSize by remember { mutableStateOf(IntSize(0, 0)) }
     Column(
@@ -70,7 +69,7 @@ fun PickerForeground(
         }
         SimpleNav(
             modifier = Modifier
-                .background(surfaceColor)
+                .background(ConfigContent.current.surfaceColor)
                 .onSizeChanged {
                     onNavSize(it)
                 },
@@ -111,7 +110,7 @@ fun PickerForeground(
         ) {
             BottomHandler(
                 modifier = Modifier
-                    .background(surfaceColor),
+                    .background(ConfigContent.current.surfaceColor),
                 list = albums,
                 imageLoader = imageLoader,
                 onAlbumClick = onAlbumClick,
@@ -223,7 +222,7 @@ fun BottomHandler(
                     .clickable {
                         onActionChange(!showAction)
                     }
-                    .padding(ConfigContent.current.commonTextPadding),
+                    .padding(commonTextPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = if (list.isNullOrEmpty()) "" else list[selectedAlbumIndex].name)
@@ -250,7 +249,7 @@ fun BottomHandler(
                     .clickable {
                         onPreview()
                     }
-                    .padding(ConfigContent.current.commonTextPadding))
+                    .padding(commonTextPadding))
             }
         }
     }
@@ -307,7 +306,7 @@ fun SimpleNav(
                     .clickable {
                         commit()
                     }
-                    .padding(ConfigContent.current.commonTextPadding),
+                    .padding(commonTextPadding),
                 color = LocalTextStyle.current.color.copy(0.8f),
                 fontSize = 16.sp
             )

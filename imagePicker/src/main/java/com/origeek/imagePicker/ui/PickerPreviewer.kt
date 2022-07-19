@@ -172,9 +172,9 @@ fun PickerPreviewer(
         background = { _, _ ->
             val backgroundColor by animateColorAsState(
                 targetValue = if (fullScreen) {
-                    ConfigContent.current.previewBackgroundColorDark
+                    ConfigContent.current.backgroundColorDark
                 } else {
-                    ConfigContent.current.previewBackgroundColorLight
+                    ConfigContent.current.backgroundColor
                 }
             )
             Box(
@@ -274,7 +274,7 @@ fun PreviewNav(
             .pointerInput(Unit) {
                 detectTapGestures { }
             }
-            .background(ConfigContent.current.surfaceColor)
+            .background(ConfigContent.current.previewSurfaceColor)
             .statusBarsPadding()
             .padding(horizontal = 6.dp, vertical = 10.dp)
             .fillMaxWidth(),
@@ -315,7 +315,7 @@ fun PreviewNav(
                     .clickable {
                         commit()
                     }
-                    .padding(ConfigContent.current.commonTextPadding),
+                    .padding(commonTextPadding),
                 color = LocalTextStyle.current.color.copy(0.8f),
                 fontSize = 16.sp
             )
@@ -341,7 +341,7 @@ fun PreviewTab(
             .pointerInput(Unit) {
                 detectTapGestures { }
             }
-            .background(ConfigContent.current.surfaceColor)
+            .background(ConfigContent.current.previewSurfaceColor)
             .fillMaxWidth()
     ) {
         PreviewTabRow(
@@ -373,7 +373,7 @@ fun PreviewTab(
                     .clickable(!hideCheck) {
                         onAction(currentItem, !check)
                     }
-                    .padding(ConfigContent.current.commonTextPadding),
+                    .padding(commonTextPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CheckButton(

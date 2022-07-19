@@ -34,4 +34,8 @@ fun ComponentActivity.registerImagePicker(callback: (List<String>?) -> Unit): Ac
     }
 }
 
+fun ActivityResultLauncher<ImagePickerConfig?>.launch() {
+    this.launch(null)
+}
+
 

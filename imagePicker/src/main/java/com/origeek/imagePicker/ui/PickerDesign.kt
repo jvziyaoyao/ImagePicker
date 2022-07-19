@@ -65,6 +65,8 @@ enum class DecoderMineType(val mimeType: String) {
     ;
 }
 
+val commonTextPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp)
+
 @SuppressLint("CompositionLocalNaming")
 val ConfigContent = compositionLocalOf { ImagePickerConfig() }
 
@@ -360,9 +362,6 @@ fun GridLayout(
     )
 }
 
-val checkMaskerColor = Color(0x8F000000)
-val uncheckMaskerColor = Color(0x0F000000)
-
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
@@ -384,7 +383,11 @@ fun ImageGrid(
         contentDescription = null,
     )
     val maskerColor by animateColorAsState(
-        targetValue = if (check) checkMaskerColor else uncheckMaskerColor
+        targetValue = if (check) {
+            ConfigContent.current.checkMaskerColor
+        } else {
+            ConfigContent.current.uncheckMaskerColor
+        }
     )
     Box(
         modifier = Modifier
