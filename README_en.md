@@ -39,15 +39,15 @@ implementation 'com.github.jvziyaoyao:ImagePicker:VERSION'
 --------
 ### 👋 For example code, please refer to [sample](https://github.com/jvziyaoyao/ImagePicker/tree/main/sample).
 
-在你的`Activity`中声明一个`luancher`
+Declare a `luancher` in your `Activity`.
 ```kotlin
 val launcher = registerImagePicker { paths -> }
 ```
-打开图片选择界面进行选择
+Launch the `imagePicker`
 ```kotlin
 launcher.launch()
 ```
-设置选择器的参数
+Set parameters for your launcher.
 ```kotlin
 val config = ImagePickerConfig(
     limit = 9,
@@ -55,27 +55,27 @@ val config = ImagePickerConfig(
 )
 launcher.launch(config)
 ```
-🚲 可选参数
+🚲 Parameter
 --------
-| 名称 | 描述 | 默认值 |
+| Name | Discription | Default |
 | --- | --- | :---: |
-| `filterMineType` | 需要过滤的mime-type | `emptyList()` |
-| `limit` | 限制图片选择的数量 | `NO_LIMIT` |
-| `navTitle` | picker页面标题文字 | `""` |
-| `backgroundColor` | 背景颜色 | `Color(0xFFF4F4F4)` |
-| `backgroundColorDark` | 深色背景颜色 | `Color(0xFF000000)` |
-| `checkColorDefault` | 默认选中颜色 | `Color(0xCCFFFFFF)` |
-| `loadingColor` | 加载标识的颜色 | `Color(0xCCFFFFFF)` |
-| `surfaceColor` | 表面颜色 | `Color(0xFFFFFFFF)` |
-| `previewSurfaceColor` | 预览表面颜色 | `Color(0xCCFFFFFF)` |
-| `checkMaskerColor` | 方格中选中时的遮罩颜色 | `Color(0x8F000000)` |
-| `uncheckMaskerColor` | 方格中未选中的遮罩颜色 | `Color(0x0F000000)` |
-| `tabCheckColor` | tab选中颜色 | `Color(0x66000000)` |
-| `tabImageCheckBorderColor` | tab图片方框颜色 | `Color(0x33000000)` |
-| `tabImageMaskerColor` | tab图片选中遮罩颜色 | `Color(0x14000000)` |
-| `tabImageMaskerUncheckedColor` | tab图片未选中遮罩颜色 | `Color(0x99CCCCCC)` |
+| `filterMineType` | If you don't want some mime-type. | `emptyList()` |
+| `limit` | Limit the number of pictures selected. | `NO_LIMIT` |
+| `navTitle` | Set page title. | `""` |
+| `backgroundColor` | Background color. | `Color(0xFFF4F4F4)` |
+| `backgroundColorDark` | BG color on fullscreen mode. | `Color(0xFF000000)` |
+| `checkColorDefault` | Default selected color. | `Color(0xCCFFFFFF)` |
+| `loadingColor` | Loading circle color. | `Color(0xCCFFFFFF)` |
+| `surfaceColor` | Color on surface. | `Color(0xFFFFFFFF)` |
+| `previewSurfaceColor` | Color on surface when preview image. | `Color(0xCCFFFFFF)` |
+| `checkMaskerColor` | Selected masker color on checked block. | `Color(0x8F000000)` |
+| `uncheckMaskerColor` | Unselected masker color on checked block. | `Color(0x0F000000)` |
+| `tabCheckColor` | Tab selected color. | `Color(0x66000000)` |
+| `tabImageCheckBorderColor` | Tab selected border color. | `Color(0x33000000)` |
+| `tabImageMaskerColor` | Tab selected image masker color. | `Color(0x14000000)` |
+| `tabImageMaskerUncheckedColor` | Tab unselected image masker color. | `Color(0x99CCCCCC)` |
 
-🕵️‍♀️ 开源许可
+🕵️‍♀️ License
 --------
 MIT License
 
