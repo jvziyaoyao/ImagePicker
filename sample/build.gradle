@@ -48,7 +48,11 @@ android {
 }
 
 dependencies {
-    implementation project(":imagePicker")
+    if (isApplyModule.toBoolean()) {
+        implementation project(":imagePicker")
+    } else {
+        implementation 'com.github.jvziyaoyao:ImagePicker:1.0.1-alpha.1'
+    }
 
     implementation 'com.github.jvziyaoyao:ImageViewer:1.0.1-alpha.2'
 
