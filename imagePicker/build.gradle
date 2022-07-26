@@ -1,6 +1,28 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
+    id 'maven-publish'
+}
+
+def GROUP_NAME = 'com.github.jvziyaoyao'
+def ARTIFACT_NAME = 'image-picker'
+def VERSION_CODE = 1
+def VERSION_NAME = '1.0.1-alpha.1'
+
+group GROUP_NAME
+version VERSION_NAME
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = GROUP_NAME
+                artifactId = ARTIFACT_NAME
+                version = VERSION_NAME
+            }
+        }
+    }
 }
 
 android {
@@ -9,8 +31,8 @@ android {
     defaultConfig {
         minSdk 24
         targetSdk 31
-        versionCode 1
-        versionName "1.0.1"
+        versionCode VERSION_CODE
+        versionName VERSION_NAME
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
