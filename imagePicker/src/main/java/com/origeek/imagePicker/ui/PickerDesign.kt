@@ -155,7 +155,7 @@ fun PickerContent(
     /**
      * 显示预览方法
      */
-    fun showPreviewer(mode: PreviewListMode, index: Int) {
+    suspend fun showPreviewer(mode: PreviewListMode, index: Int) {
         previewListMode = mode
         showList.clear()
         val addList = when (mode) {
@@ -203,7 +203,9 @@ fun PickerContent(
                 rememberImageLoader(it)
             },
         ) { index ->
-            showPreviewer(PreviewListMode.IMAGE_LIST, index)
+            scope.launch {
+                showPreviewer(PreviewListMode.IMAGE_LIST, index)
+            }
         }
         PickerForeground(
             albums = albums,
@@ -223,7 +225,9 @@ fun PickerContent(
             },
             onBack = onBack,
             onPreview = {
-                showPreviewer(PreviewListMode.CHECKED_LIST, 0)
+                scope.launch {
+                    showPreviewer(PreviewListMode.CHECKED_LIST, 0)
+                }
             },
             onNavSize = { navSize = it },
             onTabSize = { tabSize = it },

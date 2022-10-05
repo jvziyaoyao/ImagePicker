@@ -44,59 +44,43 @@ import com.origeek.imagePicker.util.showSystemUI
 import com.origeek.imageViewer.ImagePreviewer
 import com.origeek.imageViewer.ImagePreviewerState
 import com.origeek.imageViewer.ImageViewerState
+import com.origeek.imageViewer.rememberPreviewerState
 import kotlinx.coroutines.launch
 
-class PickerPreviewerState(
-    // 默认页码
-    index: Int = 0,
-    // 默认显示标识
-    show: Boolean = false,
-) {
+class PickerPreviewerState internal constructor() {
 
     // 当前页码
     val index: Int
-        get() = state.index
+        get() = state.currentPage
 
     // 当前显示标识
     val show: Boolean
-        get() = state.show
+        get() = state.visible
 
     // 预览组件状态
-    internal val state: ImagePreviewerState =
-        ImagePreviewerState(index, show)
+    internal lateinit var state: ImagePreviewerState
 
-    fun show(index: Int) {
-        state.show(index)
+    suspend fun show(index: Int) {
+        state.open(index)
     }
 
-    fun hide() {
-        state.hide()
+    suspend fun hide() {
+        state.close()
     }
 
-    fun scroll(index: Int) {
-        state.scrollTo(index)
-    }
-
-    companion object {
-        val SAVER: Saver<PickerPreviewerState, *> = listSaver(save = {
-            listOf(
-                it.index,
-                it.show
-            ) as List<Any>
-        }, restore = {
-            PickerPreviewerState(
-                index = it[0] as Int,
-                show = it[1] as Boolean,
-            )
-        })
+    suspend fun scroll(index: Int) {
+        state.scrollToPage(index)
     }
 }
 
 @Composable
-fun rememberPickerPreviewerState(): PickerPreviewerState =
-    rememberSaveable(saver = PickerPreviewerState.SAVER) {
-        PickerPreviewerState()
-    }
+fun rememberPickerPreviewerState(): PickerPreviewerState {
+    val previewerState = rememberPreviewerState()
+    val pickerState = remember { PickerPreviewerState() }
+    pickerState.state = previewerState
+    return pickerState
+}
+
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -128,13 +112,14 @@ fun PickerPreviewer(
         if (fullScreen) {
             fullScreen = false
         } else {
-            previewerState.hide()
+            scope.launch {
+                previewerState.hide()
+            }
         }
     }
     ImagePreviewer(
         count = showList.size,
         state = previewerState.state,
-        backHandlerEnable = false,
         imageLoader = {
             hugeImageLoader(showList[it].path ?: "")
         },
@@ -156,7 +141,9 @@ fun PickerPreviewer(
                 fullScreen = fullScreen,
                 imageLoader = imageLoader,
                 onBack = {
-                    previewerState.hide()
+                    scope.launch {
+                        previewerState.hide()
+                    }
                 },
                 commit = commit,
                 onCheck = onCheck,

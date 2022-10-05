@@ -54,7 +54,7 @@ dependencies {
         implementation 'com.github.jvziyaoyao:ImagePicker:1.0.1-alpha.1'
     }
 
-    implementation 'com.github.jvziyaoyao:ImageViewer:1.0.1-alpha.2'
+    implementation 'com.github.jvziyaoyao:ImageViewer:feat-transform-SNAPSHOT'
 
     implementation 'io.coil-kt:coil:2.0.0-rc03'
     implementation 'io.coil-kt:coil-svg:2.0.0-rc03'

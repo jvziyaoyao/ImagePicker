@@ -30,7 +30,7 @@ class PickerActivity : ComponentActivity(), CoroutineScope by MainScope() {
         val imagePickerConfig = intent.getParcelableExtra(PICKER_ARGUMENT_NAME) ?: ImagePickerConfig()
         pickerViewModel.pickerConfig = imagePickerConfig
 
-        setContent {
+        setContent { 
             MaterialTheme {
                 PickerBody(
                     viewModel = pickerViewModel,

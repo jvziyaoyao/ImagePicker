@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -32,6 +33,7 @@ import com.origeek.imageViewer.ImagePreviewer
 import com.origeek.imageViewer.rememberPreviewerState
 import com.origeek.pickerDemo.base.BaseActivity
 import com.origeek.pickerDemo.ui.theme.ImageViewerTheme
+import kotlinx.coroutines.launch
 
 const val SYSTEM_UI_VISIBILITY = "SYSTEM_UI_VISIBILITY"
 
@@ -87,9 +89,10 @@ fun SelectorBody(
     onImageViewVisible: (Boolean) -> Unit = {},
     goPicker: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
     val imageViewerState = rememberPreviewerState()
-    LaunchedEffect(key1 = imageViewerState.show, block = {
-        onImageViewVisible(imageViewerState.show)
+    LaunchedEffect(key1 = imageViewerState.visible, block = {
+        onImageViewVisible(imageViewerState.visible)
     })
     Box(
         modifier = Modifier
@@ -118,7 +121,9 @@ fun SelectorBody(
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable {
-                            imageViewerState.show(index)
+                            scope.launch {
+                                imageViewerState.open(index)
+                            }
                         }
                         .fillMaxSize(),
                     painter = rememberCoilImagePainter(path = path),
@@ -151,7 +156,9 @@ fun SelectorBody(
                 ?: rememberCoilImagePainter(path = list[index])
         },
         onTap = {
-            imageViewerState.hide()
+            scope.launch {
+                imageViewerState.close()
+            }
         }
     )
 }
