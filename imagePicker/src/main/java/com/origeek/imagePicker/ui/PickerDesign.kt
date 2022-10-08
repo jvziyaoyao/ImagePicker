@@ -50,7 +50,10 @@ import com.origeek.imagePicker.vm.PickerViewModel
 import com.origeek.imageViewer.TransformImageView
 import com.origeek.imageViewer.TransformItemState
 import com.origeek.imageViewer.rememberTransformItemState
+import com.origeek.ui.common.LazyGridLayout
+import com.origeek.ui.common.LazyGridLayoutState
 import com.origeek.ui.common.ScaleGrid
+import com.origeek.ui.common.rememberLazyGridLayoutState
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
@@ -148,7 +151,7 @@ fun PickerContent(
     // 菜单栏大小
     var tabSize by remember { mutableStateOf(IntSize(0, 0)) }
     // 图片网格状态
-    val gridState = rememberLazyListState()
+    val gridState = rememberLazyGridLayoutState()
     // 当前预览模式，预览选择列表，预览当前列表
     var previewListMode by rememberSaveable { mutableStateOf(PreviewListMode.IMAGE_LIST) }
     // 显示列表
@@ -202,7 +205,7 @@ fun PickerContent(
                     top = LocalDensity.current.run { navSize.height.toDp() },
                     bottom = LocalDensity.current.run { tabSize.height.toDp() },
                 ),
-            lazyListState = gridState,
+            lazyState = gridState,
             list = list,
             getKey = getKey,
             filled = filled,
@@ -296,7 +299,7 @@ fun PickerContent(
 @Composable
 fun CenterGrid(
     modifier: Modifier = Modifier,
-    lazyListState: LazyListState = rememberLazyListState(),
+    lazyState: LazyGridLayoutState = rememberLazyGridLayoutState(),
     list: List<PhotoQueryEntity>,
     checkList: List<PhotoQueryEntity>,
     filled: Boolean = false,
@@ -310,10 +313,10 @@ fun CenterGrid(
     val lineCount = 4
     val p = 0.6.dp
     Box(modifier = modifier.fillMaxSize()) {
-        GridLayout(
+        LazyGridLayout(
             columns = lineCount,
             size = list.size,
-            state = lazyListState,
+            state = lazyState,
             contentPadding = contentPadding
         ) { index ->
             val item = list[index]
@@ -351,39 +354,6 @@ fun CenterGrid(
 }
 
 @Composable
-fun GridLayout(
-    modifier: Modifier = Modifier,
-    columns: Int,
-    size: Int,
-    state: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(),
-    block: @Composable (Int) -> Unit,
-) {
-    val line = ceil(size.toDouble() / columns).toInt()
-    LazyColumn(
-        modifier = modifier,
-        state = state,
-        content = {
-            items(count = line, key = { it }) { c ->
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    for (r in 0 until columns) {
-                        val index = c * columns + r
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                        ) {
-                            if (index < size) {
-                                block(index)
-                            }
-                        }
-                    }
-                }
-            }
-        }, contentPadding = contentPadding
-    )
-}
-
-@Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
     image: Any,
@@ -401,7 +371,7 @@ fun ImageGrid(
             .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        ScaleGrid({
+        ScaleGrid(onTap = {
             onClick()
         }) {
             TransformImageView(
@@ -410,29 +380,29 @@ fun ImageGrid(
                 itemState = itemState,
                 previewerState = previewerState.state,
             )
-            val maskerColor by animateColorAsState(
-                targetValue = if (check) {
-                    ConfigContent.current.checkMaskerColor
-                } else {
-                    ConfigContent.current.uncheckMaskerColor
-                }
-            )
-            Box(
-                modifier = Modifier
-                    .background(maskerColor)
-                    .fillMaxSize(), contentAlignment = Alignment.TopCenter
-            ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
-                    CheckButton(
-                        check = check,
-                        hideCircle = filled,
-                        key = image,
-                        onChangeAction = onChangeAction,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .padding(top = 4.dp, end = 4.dp)
-                    )
-                }
+        }
+        val maskerColor by animateColorAsState(
+            targetValue = if (check) {
+                ConfigContent.current.checkMaskerColor
+            } else {
+                ConfigContent.current.uncheckMaskerColor
+            }
+        )
+        Box(
+            modifier = Modifier
+                .background(maskerColor)
+                .fillMaxSize(), contentAlignment = Alignment.TopCenter
+        ) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
+                CheckButton(
+                    check = check,
+                    hideCircle = filled,
+                    key = image,
+                    onChangeAction = onChangeAction,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(top = 4.dp, end = 4.dp)
+                )
             }
         }
     }

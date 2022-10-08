@@ -115,7 +115,7 @@ fun SelectorBody(
                 contentAlignment = Alignment.Center,
             ) {
                 val itemState = rememberTransformItemState()
-                ScaleGrid({
+                ScaleGrid(onTap = {
                     scope.launch {
                         imageViewerState.openTransform(index, itemState)
                     }
