@@ -7,10 +7,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -47,8 +44,13 @@ import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.NO_LIMIT
 import com.origeek.imagePicker.model.AlbumEntity
 import com.origeek.imagePicker.model.PhotoQueryEntity
-import com.origeek.imagePicker.util.*
+import com.origeek.imagePicker.util.WebpUtil
+import com.origeek.imagePicker.util.getMimeType
 import com.origeek.imagePicker.vm.PickerViewModel
+import com.origeek.imageViewer.TransformImageView
+import com.origeek.imageViewer.TransformItemState
+import com.origeek.imageViewer.rememberTransformItemState
+import com.origeek.ui.common.ScaleGrid
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
@@ -88,7 +90,7 @@ fun PickerBody(
                 )
             }
             PickerPermissions({
-                if (it && viewModel.albumList.isNullOrEmpty()) viewModel.initial()
+                if (it && viewModel.albumList.isEmpty()) viewModel.initial()
             }) {
                 PickerContent(
                     albums = viewModel.albumList,
@@ -137,8 +139,10 @@ fun PickerContent(
     val scope = rememberCoroutineScope()
     // 当前预览列表
     val list = if (albums.isEmpty()) emptyList() else albums[selectedAlbumIndex].list
+    // 获取transform的key
+    val getKey: (Int) -> Any = { list[it].path ?: "" }
     // 图片预览状态
-    val imagePreviewerState = rememberPickerPreviewerState()
+    val imagePreviewerState = rememberPickerPreviewerState(getKey)
     // 导航栏大小
     var navSize by remember { mutableStateOf(IntSize(0, 0)) }
     // 菜单栏大小
@@ -155,7 +159,11 @@ fun PickerContent(
     /**
      * 显示预览方法
      */
-    suspend fun showPreviewer(mode: PreviewListMode, index: Int) {
+    suspend fun showPreviewer(
+        mode: PreviewListMode,
+        index: Int,
+        itemState: TransformItemState? = null
+    ) {
         previewListMode = mode
         showList.clear()
         val addList = when (mode) {
@@ -163,7 +171,7 @@ fun PickerContent(
             PreviewListMode.CHECKED_LIST -> checkList
         }
         showList.addAll(addList)
-        imagePreviewerState.show(index)
+        imagePreviewerState.show(index, itemState)
     }
 
     Box(
@@ -196,15 +204,17 @@ fun PickerContent(
                 ),
             lazyListState = gridState,
             list = list,
+            getKey = getKey,
             filled = filled,
             checkList = checkList,
             onCheck = onCheck,
+            previewerState = imagePreviewerState,
             imageLoader = {
                 rememberImageLoader(it)
             },
-        ) { index ->
+        ) { index, itemState ->
             scope.launch {
-                showPreviewer(PreviewListMode.IMAGE_LIST, index)
+                showPreviewer(PreviewListMode.IMAGE_LIST, index, itemState)
             }
         }
         PickerForeground(
@@ -290,10 +300,12 @@ fun CenterGrid(
     list: List<PhotoQueryEntity>,
     checkList: List<PhotoQueryEntity>,
     filled: Boolean = false,
+    previewerState: PickerPreviewerState,
+    getKey: (Int) -> Any,
     imageLoader: @Composable (model: Any) -> Painter,
     onCheck: (PhotoQueryEntity, Boolean) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
-    onItemClick: (Int) -> Unit,
+    onItemClick: (Int, TransformItemState) -> Unit,
 ) {
     val lineCount = 4
     val p = 0.6.dp
@@ -316,15 +328,20 @@ fun CenterGrid(
                             end = if (index % lineCount == lineCount - 1) 0.dp else p
                         )
                 ) {
+                    val itemState = rememberTransformItemState()
                     ImageGrid(
                         image = item.path!!,
+                        key = getKey(index),
                         check = checkList.contains(item),
                         filled = filled,
                         imageLoader = imageLoader,
+                        itemState = itemState,
+                        previewerState = previewerState,
                         onChangeAction = {
                             onCheck(item, !checkList.contains(item))
-                        }) {
-                        onItemClick(index)
+                        },
+                    ) {
+                        onItemClick(index, itemState)
                     }
                 }
             }
@@ -370,44 +387,53 @@ fun GridLayout(
 fun ImageGrid(
     modifier: Modifier = Modifier,
     image: Any,
+    key: Any,
     check: Boolean,
     filled: Boolean = false,
     imageLoader: @Composable (model: Any) -> Painter,
+    itemState: TransformItemState,
+    previewerState: PickerPreviewerState,
     onChangeAction: () -> Unit = {},
     onClick: () -> Unit,
 ) {
-    Image(
-        modifier = modifier
-            .clickable {
-                onClick()
-            }
-            .fillMaxSize(),
-        painter = imageLoader(image),
-        contentScale = ContentScale.Crop,
-        contentDescription = null,
-    )
-    val maskerColor by animateColorAsState(
-        targetValue = if (check) {
-            ConfigContent.current.checkMaskerColor
-        } else {
-            ConfigContent.current.uncheckMaskerColor
-        }
-    )
     Box(
-        modifier = Modifier
-            .background(maskerColor)
-            .fillMaxSize(), contentAlignment = Alignment.TopCenter
+        modifier = modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
-            CheckButton(
-                check = check,
-                hideCircle = filled,
-                key = image,
-                onChangeAction = onChangeAction,
-                modifier = Modifier
-                    .size(32.dp)
-                    .padding(top = 4.dp, end = 4.dp)
+        ScaleGrid({
+            onClick()
+        }) {
+            TransformImageView(
+                key = key,
+                painter = imageLoader(image),
+                itemState = itemState,
+                previewerState = previewerState.state,
             )
+            val maskerColor by animateColorAsState(
+                targetValue = if (check) {
+                    ConfigContent.current.checkMaskerColor
+                } else {
+                    ConfigContent.current.uncheckMaskerColor
+                }
+            )
+            Box(
+                modifier = Modifier
+                    .background(maskerColor)
+                    .fillMaxSize(), contentAlignment = Alignment.TopCenter
+            ) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
+                    CheckButton(
+                        check = check,
+                        hideCircle = filled,
+                        key = image,
+                        onChangeAction = onChangeAction,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .padding(top = 4.dp, end = 4.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -470,16 +496,18 @@ fun PermissionNotGranted(permissionState: MultiplePermissionsState) {
     ) {
         Text(text = "👋 获取文件权限，以便访问本地相册！")
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            permissionState.launchMultiplePermissionRequest()
-        }, colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)) {
+        Button(
+            onClick = {
+                permissionState.launchMultiplePermissionRequest()
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)
+        ) {
             Text(text = "🛴 获取权限")
         }
     }
 }
 
 @Composable
-@OptIn(ExperimentalPermissionsApi::class)
 fun PermissionsNotAvailable() {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -489,9 +517,12 @@ fun PermissionsNotAvailable() {
         val ctx = LocalContext.current
         Text(text = "✋ 没有权限，无法访问本地相册！")
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            XXPermissions.startPermissionActivity(ctx, permissions)
-        }, colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)) {
+        Button(
+            onClick = {
+                XXPermissions.startPermissionActivity(ctx, permissions)
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)
+        ) {
             Text(text = "🚴‍♀️ 获取权限")
         }
     }

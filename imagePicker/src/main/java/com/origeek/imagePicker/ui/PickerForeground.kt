@@ -37,7 +37,6 @@ import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.NO_LIMIT
 import com.origeek.imagePicker.model.AlbumEntity
 import com.origeek.imagePicker.model.PhotoQueryEntity
-import com.origeek.imagePicker.vm.PickerViewModel
 
 @Composable
 fun PickerForeground(
@@ -225,7 +224,7 @@ fun BottomHandler(
                     .padding(commonTextPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = if (list.isNullOrEmpty()) "" else list[selectedAlbumIndex].name)
+                Text(text = if (list.isEmpty()) "" else list[selectedAlbumIndex].name)
                 Spacer(modifier = Modifier.width(8.dp))
                 val iconRotateAnimation by animateFloatAsState(targetValue = if (showAction) -180f else 0f)
                 Icon(

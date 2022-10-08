@@ -1,4 +1,4 @@
-package com.origeek.imagePicker.util
+package com.origeek.imagePicker.ui
 
 import android.graphics.BitmapRegionDecoder
 import android.os.Build.VERSION.SDK_INT
@@ -14,6 +14,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import coil.size.Size
 import com.origeek.imagePicker.R
+import com.origeek.imagePicker.util.ContextUtil
 import com.origeek.imageViewer.ImageDecoder
 
 // 图片加载器
@@ -50,7 +51,8 @@ fun rememberHugeImagePainter(path: String): ImageDecoder? {
     return remember {
         try {
             val decoder = BitmapRegionDecoder.newInstance(path, false)
-            ImageDecoder(decoder = decoder)
+            val imageDecoder = ImageDecoder(decoder = decoder)
+            imageDecoder
         } catch (e: Exception) {
             e.printStackTrace()
             null

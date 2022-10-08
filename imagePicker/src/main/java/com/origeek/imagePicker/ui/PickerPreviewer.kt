@@ -1,10 +1,10 @@
 package com.origeek.imagePicker.ui
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,8 +20,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,10 +39,7 @@ import com.origeek.imagePicker.model.PhotoQueryEntity
 import com.origeek.imagePicker.util.findWindow
 import com.origeek.imagePicker.util.hideSystemUI
 import com.origeek.imagePicker.util.showSystemUI
-import com.origeek.imageViewer.ImagePreviewer
-import com.origeek.imageViewer.ImagePreviewerState
-import com.origeek.imageViewer.ImageViewerState
-import com.origeek.imageViewer.rememberPreviewerState
+import com.origeek.imageViewer.*
 import kotlinx.coroutines.launch
 
 class PickerPreviewerState internal constructor() {
@@ -57,26 +52,39 @@ class PickerPreviewerState internal constructor() {
     val show: Boolean
         get() = state.visible
 
+    var getKey: ((Int) -> Any)? = null
+
     // 预览组件状态
     internal lateinit var state: ImagePreviewerState
 
-    suspend fun show(index: Int) {
-        state.open(index)
+    suspend fun show(index: Int, itemState: TransformItemState?) {
+        if (itemState != null) {
+            state.openTransform(index, itemState)
+        } else {
+            state.open(index)
+        }
     }
 
     suspend fun hide() {
-        state.close()
+        if (getKey != null) {
+            state.closeTransform(getKey!!.invoke(index))
+        } else {
+            state.close()
+        }
     }
 
     suspend fun scroll(index: Int) {
-        state.scrollToPage(index)
+        state.animateScrollToPage(index)
     }
 }
 
 @Composable
-fun rememberPickerPreviewerState(): PickerPreviewerState {
-    val previewerState = rememberPreviewerState()
+fun rememberPickerPreviewerState(getKey: (Int) -> Any): PickerPreviewerState {
+    // TODO: animationSpec默认值
+    val previewerState = rememberPreviewerState(animationSpec = tween(320))
+    previewerState.enableVerticalDrag { getKey(it) }
     val pickerState = remember { PickerPreviewerState() }
+    pickerState.getKey = getKey
     pickerState.state = previewerState
     return pickerState
 }
@@ -127,8 +135,6 @@ fun PickerPreviewer(
             fullScreen = !fullScreen
         },
         foreground = { size, page ->
-            Log.i("TAG", "PickerPreviewer: size - page $size - $page")
-            Log.i("TAG", "PickerPreviewer: previewerState.index ${previewerState.index}")
             PreviewForeground(
                 // 这里的page必须用目标的page
                 index = previewerState.index,

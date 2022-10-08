@@ -67,8 +67,8 @@ android {
 }
 
 dependencies {
-    implementation 'com.github.jvziyaoyao:ImageViewer:feat-transform-SNAPSHOT'
-    implementation "com.google.accompanist:accompanist-pager:0.24.3-alpha"
+    implementation "com.github.jvziyaoyao:ImageViewer:$image_viewer_version"
+    implementation "com.github.jvziyaoyao:OrigeekUI:$origeek_ui_version"
 
     implementation 'io.coil-kt:coil:2.0.0-rc03'
     implementation 'io.coil-kt:coil-svg:2.0.0-rc03'
