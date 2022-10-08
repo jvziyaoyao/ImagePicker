@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,15 +48,30 @@ class PickerPreviewerState internal constructor() {
         get() = state.currentPage
 
     // 当前显示标识
-    val show: Boolean
+    val visible: Boolean
         get() = state.visible
+
+    // 当前显示的目标标识
+    val visibleTarget: Boolean?
+        get() = state.visibleTarget
+
+    // 是否支持关闭
+    val canClose: Boolean
+        get() = state.canClose
+
+    // 是否正在执行动画
+    val animating: Boolean
+        get() = state.animating
 
     var getKey: ((Int) -> Any)? = null
 
     // 预览组件状态
     internal lateinit var state: ImagePreviewerState
 
+    private var isOpenTransform: Boolean = false
+
     suspend fun show(index: Int, itemState: TransformItemState?) {
+        isOpenTransform = itemState != null
         if (itemState != null) {
             state.openTransform(index, itemState)
         } else {
@@ -66,7 +80,7 @@ class PickerPreviewerState internal constructor() {
     }
 
     suspend fun hide() {
-        if (getKey != null) {
+        if (getKey != null && isOpenTransform) {
             state.closeTransform(getKey!!.invoke(index))
         } else {
             state.close()
@@ -80,8 +94,7 @@ class PickerPreviewerState internal constructor() {
 
 @Composable
 fun rememberPickerPreviewerState(getKey: (Int) -> Any): PickerPreviewerState {
-    // TODO: animationSpec默认值
-    val previewerState = rememberPreviewerState(animationSpec = tween(320))
+    val previewerState = rememberPreviewerState()
     previewerState.enableVerticalDrag { getKey(it) }
     val pickerState = remember { PickerPreviewerState() }
     pickerState.getKey = getKey
@@ -105,6 +118,7 @@ fun PickerPreviewer(
     commit: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val window = LocalContext.current.findWindow()
     var fullScreen by rememberSaveable { mutableStateOf(false) }
     var imageState by remember { mutableStateOf<ImageViewerState?>(null) }
     var scale by remember { mutableStateOf(1F) }
@@ -116,13 +130,27 @@ fun PickerPreviewer(
             scale = it.scale.value
         }
     }
-    BackHandler(fullScreen || previewerState.show) {
+    if (fullScreen || previewerState.canClose || previewerState.animating) BackHandler {
         if (fullScreen) {
             fullScreen = false
-        } else {
+        } else if (previewerState.canClose) {
             scope.launch {
                 previewerState.hide()
             }
+        }
+    }
+    LaunchedEffect(fullScreen) {
+        if (window == null) return@LaunchedEffect
+        if (fullScreen) {
+            hideSystemUI(window)
+        } else {
+            showSystemUI(window)
+        }
+    }
+    LaunchedEffect(previewerState.visibleTarget) {
+        if (window == null) return@LaunchedEffect
+        if (previewerState.visibleTarget == false) {
+            fullScreen = false
         }
     }
     ImagePreviewer(
@@ -208,15 +236,6 @@ fun PreviewForeground(
     }
     val page = if (index > showList.size - 1) showList.size - 1 else index
     val currentItem = showList[page]
-    val window = LocalContext.current.findWindow()
-    LaunchedEffect(key1 = fullScreen) {
-        if (window == null) return@LaunchedEffect
-        if (fullScreen) {
-            hideSystemUI(window)
-        } else {
-            showSystemUI(window)
-        }
-    }
     Column(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = !fullScreen,

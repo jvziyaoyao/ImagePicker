@@ -1,8 +1,6 @@
 package com.origeek.pickerDemo
 
 import android.os.Bundle
-import android.view.Window
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
@@ -17,13 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.registerImagePicker
 import com.origeek.imagePicker.ui.rememberCoilImagePainter
 import com.origeek.imagePicker.ui.rememberHugeImagePainter
+import com.origeek.imagePicker.util.hideSystemUI
+import com.origeek.imagePicker.util.showSystemUI
 import com.origeek.imageViewer.ImagePreviewer
 import com.origeek.imageViewer.TransformImageView
 import com.origeek.imageViewer.rememberPreviewerState
@@ -86,7 +84,7 @@ fun SelectorBody(
     goPicker: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val imageViewerState = rememberPreviewerState(animationSpec = tween(400))
+    val imageViewerState = rememberPreviewerState()
     imageViewerState.enableVerticalDrag { list[imageViewerState.currentPage] }
     LaunchedEffect(key1 = imageViewerState.visibleTarget, block = {
         if (imageViewerState.visibleTarget != null) {
@@ -158,19 +156,4 @@ fun SelectorBody(
             }
         }
     )
-}
-
-fun hideSystemUI(window: Window) {
-    WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-        controller.hide(WindowInsetsCompat.Type.systemBars())
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-    }
-}
-
-fun showSystemUI(window: Window) {
-    WindowInsetsControllerCompat(
-        window,
-        window.decorView
-    ).show(WindowInsetsCompat.Type.systemBars())
 }

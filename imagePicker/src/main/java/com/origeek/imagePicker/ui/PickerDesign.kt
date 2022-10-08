@@ -2,7 +2,6 @@ package com.origeek.imagePicker.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -11,9 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -57,7 +53,6 @@ import com.origeek.ui.common.rememberLazyGridLayoutState
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
-import kotlin.math.ceil
 
 // 需要权限
 val permissions = listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -105,7 +100,6 @@ fun PickerBody(
                     onAlbumClick = { viewModel.selectedAlbumIndex = it },
                     onBack = onBack,
                     onCheck = { selectedItem, check ->
-                        Log.i("TAG", "PickerBody: ${selectedItem.path}")
                         viewModel.checkPhoto(selectedItem, check)
                     },
                     commit = commit
@@ -141,11 +135,11 @@ fun PickerContent(
 ) {
     val scope = rememberCoroutineScope()
     // 当前预览列表
-    val list = if (albums.isEmpty()) emptyList() else albums[selectedAlbumIndex].list
-    // 获取transform的key
-    val getKey: (Int) -> Any = { list[it].path ?: "" }
+    val list = remember { mutableStateListOf<PhotoQueryEntity>() }
+    // 显示列表
+    val showList = remember { mutableStateListOf<PhotoQueryEntity>() }
     // 图片预览状态
-    val imagePreviewerState = rememberPickerPreviewerState(getKey)
+    val imagePreviewerState = rememberPickerPreviewerState { showList[it].path ?: "" }
     // 导航栏大小
     var navSize by remember { mutableStateOf(IntSize(0, 0)) }
     // 菜单栏大小
@@ -154,11 +148,15 @@ fun PickerContent(
     val gridState = rememberLazyGridLayoutState()
     // 当前预览模式，预览选择列表，预览当前列表
     var previewListMode by rememberSaveable { mutableStateOf(PreviewListMode.IMAGE_LIST) }
-    // 显示列表
-    val showList = remember { mutableStateListOf<PhotoQueryEntity>() }
     // 视图大小
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
-
+    // 需要通过这个途径，showPreviewer中的list才能够响应
+    LaunchedEffect(key1 = selectedAlbumIndex, key2 = albums.size) {
+        if (albums.isNotEmpty()) {
+            list.clear()
+            list.addAll(albums[selectedAlbumIndex].list)
+        }
+    }
     /**
      * 显示预览方法
      */
@@ -207,7 +205,7 @@ fun PickerContent(
                 ),
             lazyState = gridState,
             list = list,
-            getKey = getKey,
+            getKey = { list[it].path ?: "" },
             filled = filled,
             checkList = checkList,
             onCheck = onCheck,
@@ -255,7 +253,7 @@ fun PickerContent(
                 rememberImageLoader(it)
             },
             hugeImageLoader = {
-                val file by remember { mutableStateOf(File(it)) }
+                val file = File(it)
                 when (file.getMimeType()) {
                     DecoderMineType.JPEG.mimeType,
                     DecoderMineType.PNG.mimeType -> {
