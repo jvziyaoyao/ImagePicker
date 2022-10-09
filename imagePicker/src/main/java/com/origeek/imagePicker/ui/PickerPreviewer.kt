@@ -70,6 +70,8 @@ class PickerPreviewerState internal constructor() {
 
     private var isOpenTransform: Boolean = false
 
+    fun clearTransformItems() = state.clearTransformItems()
+
     suspend fun show(index: Int, itemState: TransformItemState?) {
         isOpenTransform = itemState != null
         if (itemState != null) {

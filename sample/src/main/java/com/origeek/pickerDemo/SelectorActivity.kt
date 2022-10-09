@@ -30,17 +30,31 @@ import com.origeek.pickerDemo.base.BaseActivity
 import com.origeek.ui.common.LazyGridLayout
 import com.origeek.ui.common.ScaleGrid
 import kotlinx.coroutines.launch
+import java.util.*
+import java.util.stream.Collectors
 
 const val SYSTEM_UI_VISIBILITY = "SYSTEM_UI_VISIBILITY"
+
+data class SelectedImage(
+    val id: String,
+    val path: String,
+)
 
 class SelectorActivity : BaseActivity() {
 
     private var systemUIVisible = true
 
-    private val selectedList = mutableStateListOf<String>()
+    private val selectedList = mutableStateListOf<SelectedImage>()
 
     private val launcher = registerImagePicker { paths ->
-        paths?.let { selectedList.addAll(it) }
+        paths?.let {
+            selectedList.addAll(paths.stream().map {
+                SelectedImage(
+                    id = UUID.randomUUID().toString(),
+                    path = it,
+                )
+            }.collect(Collectors.toList()))
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,13 +93,14 @@ class SelectorActivity : BaseActivity() {
 
 @Composable
 fun SelectorBody(
-    list: List<String>,
+    list: List<SelectedImage>,
     onImageViewVisible: (Boolean) -> Unit = {},
     goPicker: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val imageViewerState = rememberPreviewerState()
-    imageViewerState.enableVerticalDrag { list[imageViewerState.currentPage] }
+    val getKey: () -> Any = { list[imageViewerState.currentPage].id }
+    imageViewerState.enableVerticalDrag { getKey() }
     LaunchedEffect(key1 = imageViewerState.visibleTarget, block = {
         if (imageViewerState.visibleTarget != null) {
             onImageViewVisible(imageViewerState.visibleTarget ?: imageViewerState.visible)
@@ -105,7 +120,7 @@ fun SelectorBody(
             size = list.size,
             padding = p,
         ) { index ->
-            val path = list[index]
+            val selectedImage = list[index]
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,8 +136,8 @@ fun SelectorBody(
                     TransformImageView(
                         itemState = itemState,
                         previewerState = imageViewerState,
-                        painter = rememberCoilImagePainter(path = path),
-                        key = path
+                        painter = rememberCoilImagePainter(path = selectedImage.path),
+                        key = selectedImage.id
                     )
                 }
             }
@@ -147,12 +162,13 @@ fun SelectorBody(
         count = list.size,
         state = imageViewerState,
         imageLoader = { index ->
-            rememberHugeImagePainter(path = list[index])
-                ?: rememberCoilImagePainter(path = list[index])
+            val path = list[index].path
+            rememberHugeImagePainter(path = path)
+                ?: rememberCoilImagePainter(path = path)
         },
         onTap = {
             scope.launch {
-                imageViewerState.closeTransform(key = list[imageViewerState.currentPage])
+                imageViewerState.closeTransform(key = getKey())
             }
         }
     )

@@ -155,6 +155,8 @@ fun PickerContent(
         if (albums.isNotEmpty()) {
             list.clear()
             list.addAll(albums[selectedAlbumIndex].list)
+            // 清除transform预览的记录
+            imagePreviewerState.clearTransformItems()
         }
     }
     /**
