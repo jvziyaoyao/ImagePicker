@@ -14,5 +14,5 @@ data class PhotoQueryEntity(
 data class AlbumEntity(
     var path: String,
     var name: String,
-    var list: List<PhotoQueryEntity>
+    var list: List<PhotoQueryEntity>,
 )

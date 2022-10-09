@@ -1,6 +1,5 @@
 package com.origeek.imagePicker.vm
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,8 +40,11 @@ class PickerViewModel(
      */
     fun initial() {
         launch {
+            loading = true
             loadFromTemp()
+            if (albumList.isNotEmpty()) loading = false
             loadFromDatabase()
+            loading = false
         }
     }
 
@@ -50,32 +52,33 @@ class PickerViewModel(
      * 从缓存文件加载
      */
     private suspend fun loadFromTemp() {
-        val t01 = System.currentTimeMillis()
-        loading = true
         albumList.clear()
         albumList.addAll(albumUseCase.loadFromTemp())
-        if (albumList.isNotEmpty()) loading = false
-        val t02 = System.currentTimeMillis()
-        Log.i("TAG", "initial: loadFromTemp ${t02 - t01}")
     }
 
     /**
      * 从手机相册加载
      */
     private suspend fun loadFromDatabase() {
-        val t01 = System.currentTimeMillis()
         val filterMineType = pickerConfig?.filterMineType ?: emptyList()
         val allAlbums = albumUseCase.loadFromDatabase(filterMineType)
         // 如果本来是空列表，直接填充
         if (albumList.isEmpty()) {
             albumList.addAll(allAlbums)
-            loading = false
-            return
+        } else {
+            copyToCurrentAlbumList(allAlbums)
         }
+    }
+
+    /**
+     * 复制到当前相册列表
+     * @param allAlbums List<AlbumEntity>
+     */
+    private fun copyToCurrentAlbumList(allAlbums: List<AlbumEntity>) {
         val currentAlbum = albumList[selectedAlbumIndex]
         val oldAlbumsMap =
             albumList.stream().collect(Collectors.toMap(AlbumEntity::path, Function.identity()))
-        allAlbums.forEach { album ->
+        for (album in allAlbums) {
             val oldAlbum = oldAlbumsMap[album.path]
             if (oldAlbum?.path == currentAlbum.path) {
                 val newList = album.list
@@ -91,14 +94,11 @@ class PickerViewModel(
                 oldList as ArrayList
                 oldList.clear()
                 oldList.addAll(addList)
-                return@forEach
+                continue
             }
             if (oldAlbum != null) albumList.remove(oldAlbum)
             albumList.add(album)
         }
-        loading = false
-        val t02 = System.currentTimeMillis()
-        Log.i("TAG", "initial: loadFromDatabase ${t02 - t01}")
     }
 
     /**

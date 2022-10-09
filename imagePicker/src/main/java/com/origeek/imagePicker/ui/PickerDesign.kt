@@ -150,8 +150,14 @@ fun PickerContent(
     var previewListMode by rememberSaveable { mutableStateOf(PreviewListMode.IMAGE_LIST) }
     // 视图大小
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    // 响应list的变化
+    val listHash = if (albums.isEmpty()) 0 else albums[selectedAlbumIndex].list.hashCode()
     // 需要通过这个途径，showPreviewer中的list才能够响应
-    LaunchedEffect(key1 = selectedAlbumIndex, key2 = albums.size) {
+    LaunchedEffect(
+        key1 = selectedAlbumIndex,
+        key2 = albums.size,
+        key3 = listHash,
+    ) {
         if (albums.isNotEmpty()) {
             list.clear()
             list.addAll(albums[selectedAlbumIndex].list)
@@ -159,6 +165,7 @@ fun PickerContent(
             imagePreviewerState.clearTransformItems()
         }
     }
+
     /**
      * 显示预览方法
      */
@@ -239,7 +246,7 @@ fun PickerContent(
             onBack = onBack,
             onPreview = {
                 scope.launch {
-                    showPreviewer(PreviewListMode.CHECKED_LIST, 0)
+                    showPreviewer(PreviewListMode.CHECKED_LIST, 0, null)
                 }
             },
             onNavSize = { navSize = it },
