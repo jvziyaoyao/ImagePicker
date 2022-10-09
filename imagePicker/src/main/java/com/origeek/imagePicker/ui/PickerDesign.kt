@@ -38,8 +38,8 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.hjq.permissions.XXPermissions
 import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.NO_LIMIT
-import com.origeek.imagePicker.model.AlbumEntity
-import com.origeek.imagePicker.model.PhotoQueryEntity
+import com.origeek.imagePicker.domain.model.AlbumEntity
+import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.util.WebpUtil
 import com.origeek.imagePicker.util.getMimeType
 import com.origeek.imagePicker.vm.PickerViewModel

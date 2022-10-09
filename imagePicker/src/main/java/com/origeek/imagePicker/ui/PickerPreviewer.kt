@@ -34,7 +34,7 @@ import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.NO_LIMIT
-import com.origeek.imagePicker.model.PhotoQueryEntity
+import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.util.findWindow
 import com.origeek.imagePicker.util.hideSystemUI
 import com.origeek.imagePicker.util.showSystemUI

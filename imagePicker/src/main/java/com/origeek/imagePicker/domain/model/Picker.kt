@@ -1,4 +1,4 @@
-package com.origeek.imagePicker.model
+package com.origeek.imagePicker.domain.model
 
 data class PhotoQueryEntity(
     var id: Long? = null,
