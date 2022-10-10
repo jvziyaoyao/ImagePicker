@@ -10,15 +10,12 @@ import com.origeek.imagePicker.config.NO_LIMIT
 import com.origeek.imagePicker.domain.model.AlbumEntity
 import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.domain.useCase.AlbumUseCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import java.util.function.Function
 import java.util.stream.Collectors
 
 class PickerViewModel(
     private val albumUseCase: AlbumUseCase,
-) : ViewModel(), CoroutineScope by MainScope() {
+) : ViewModel() {
 
     // 加载标识
     var loading by mutableStateOf(false)
@@ -34,19 +31,6 @@ class PickerViewModel(
 
     // picker的配置项
     var pickerConfig: ImagePickerConfig? = null
-
-    /**
-     * 初始化
-     */
-    fun initial() {
-        launch {
-            loading = true
-            loadFromTemp()
-            if (albumList.isNotEmpty()) loading = false
-            loadFromDatabase()
-            loading = false
-        }
-    }
 
     /**
      * 从缓存文件加载
@@ -99,6 +83,24 @@ class PickerViewModel(
             if (oldAlbum != null) albumList.remove(oldAlbum)
             albumList.add(album)
         }
+    }
+
+    /**
+     * 初始化
+     */
+    suspend fun initial() {
+        loading = true
+        loadFromTemp()
+        if (albumList.isNotEmpty()) loading = false
+        loadFromDatabase()
+        loading = false
+    }
+
+    /**
+     * 更新当前相册列表
+     */
+    suspend fun update() {
+        loadFromDatabase()
     }
 
     /**

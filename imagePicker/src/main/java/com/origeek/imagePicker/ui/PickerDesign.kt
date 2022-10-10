@@ -25,8 +25,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.rememberAsyncImagePainter
 import coil.size.Size
 import com.google.accompanist.insets.ProvideWindowInsets
@@ -77,6 +80,21 @@ fun PickerBody(
     onBack: () -> Unit,
     commit: () -> Unit,
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                scope.launch {
+                    viewModel.update()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     CompositionLocalProvider(ConfigContent provides config) {
         ProvideWindowInsets {
             val systemUiController = rememberSystemUiController()
@@ -88,7 +106,9 @@ fun PickerBody(
                 )
             }
             PickerPermissions({
-                if (it && viewModel.albumList.isEmpty()) viewModel.initial()
+                scope.launch {
+                    if (it && viewModel.albumList.isEmpty()) viewModel.initial()
+                }
             }) {
                 PickerContent(
                     albums = viewModel.albumList,
