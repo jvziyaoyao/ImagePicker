@@ -15,9 +15,8 @@ import coil.request.ImageRequest
 import coil.size.Size
 import com.origeek.imagePicker.R
 import com.origeek.imagePicker.util.ContextUtil
-import com.origeek.imageViewer.ImageDecoder
+import com.origeek.imageViewer.viewer.ImageDecoder
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 图片加载器

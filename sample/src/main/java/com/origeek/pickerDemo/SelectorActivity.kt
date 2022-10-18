@@ -22,13 +22,13 @@ import com.origeek.imagePicker.ui.rememberCoilImagePainter
 import com.origeek.imagePicker.ui.rememberHugeImagePainter
 import com.origeek.imagePicker.util.hideSystemUI
 import com.origeek.imagePicker.util.showSystemUI
-import com.origeek.imageViewer.ImagePreviewer
-import com.origeek.imageViewer.TransformImageView
-import com.origeek.imageViewer.rememberPreviewerState
-import com.origeek.imageViewer.rememberTransformItemState
+import com.origeek.imageViewer.previewer.ImagePreviewer
+import com.origeek.imageViewer.previewer.TransformImageView
+import com.origeek.imageViewer.previewer.rememberPreviewerState
+import com.origeek.imageViewer.previewer.rememberTransformItemState
 import com.origeek.pickerDemo.base.BaseActivity
-import com.origeek.ui.common.LazyGridLayout
-import com.origeek.ui.common.ScaleGrid
+import com.origeek.ui.common.compose.LazyGridLayout
+import com.origeek.ui.common.compose.ScaleGrid
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.stream.Collectors
@@ -143,7 +143,11 @@ fun SelectorBody(
             }
         }
     }
-    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+    ConstraintLayout(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+    ) {
         val (add) = createRefs()
         FloatingActionButton(
             onClick = {
@@ -166,10 +170,12 @@ fun SelectorBody(
             rememberHugeImagePainter(path = path)
                 ?: rememberCoilImagePainter(path = path)
         },
-        onTap = {
-            scope.launch {
-                imageViewerState.closeTransform(key = getKey())
+        detectGesture = {
+            onTap = {
+                scope.launch {
+                    imageViewerState.closeTransform(key = getKey())
+                }
             }
-        }
+        },
     )
 }

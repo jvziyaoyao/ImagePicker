@@ -2,6 +2,7 @@ package com.origeek.imagePicker.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -46,13 +47,13 @@ import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.util.WebpUtil
 import com.origeek.imagePicker.util.getMimeType
 import com.origeek.imagePicker.vm.PickerViewModel
-import com.origeek.imageViewer.TransformImageView
-import com.origeek.imageViewer.TransformItemState
-import com.origeek.imageViewer.rememberTransformItemState
-import com.origeek.ui.common.LazyGridLayout
-import com.origeek.ui.common.LazyGridLayoutState
-import com.origeek.ui.common.ScaleGrid
-import com.origeek.ui.common.rememberLazyGridLayoutState
+import com.origeek.imageViewer.previewer.TransformImageView
+import com.origeek.imageViewer.previewer.TransformItemState
+import com.origeek.imageViewer.previewer.rememberTransformItemState
+import com.origeek.ui.common.compose.LazyGridLayout
+import com.origeek.ui.common.compose.LazyGridLayoutState
+import com.origeek.ui.common.compose.ScaleGrid
+import com.origeek.ui.common.compose.rememberLazyGridLayoutState
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
@@ -120,6 +121,7 @@ fun PickerBody(
                     onAlbumClick = { viewModel.selectedAlbumIndex = it },
                     onBack = onBack,
                     onCheck = { selectedItem, check ->
+                        Log.i("TAG", "PickerBody: selectedItem.path ${selectedItem.path}")
                         viewModel.checkPhoto(selectedItem, check)
                     },
                     commit = commit

@@ -44,11 +44,11 @@ class TempRepoImpl : TempRepo {
 
     override fun loadFromTemp(): String {
         val file = File(tempFilePath)
+        if (!file.exists()) return ""
         val reader = FileReader(file)
         val json = reader.readText()
         reader.close()
         return json
     }
-
 
 }

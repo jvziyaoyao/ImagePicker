@@ -47,6 +47,7 @@ class AlbumUseCaseImpl(
 
     private fun copyFromTemp(): List<PhotoQueryEntity> {
         val json = tempRepo.loadFromTemp()
+        if (json.isEmpty()) return emptyList()
         return Gson().fromJson(json, object : TypeToken<List<PhotoQueryEntity>>() {}.type)
     }
 

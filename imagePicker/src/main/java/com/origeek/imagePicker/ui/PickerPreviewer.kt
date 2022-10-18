@@ -39,6 +39,11 @@ import com.origeek.imagePicker.util.findWindow
 import com.origeek.imagePicker.util.hideSystemUI
 import com.origeek.imagePicker.util.showSystemUI
 import com.origeek.imageViewer.*
+import com.origeek.imageViewer.previewer.ImagePreviewer
+import com.origeek.imageViewer.previewer.ImagePreviewerState
+import com.origeek.imageViewer.previewer.TransformItemState
+import com.origeek.imageViewer.previewer.rememberPreviewerState
+import com.origeek.imageViewer.viewer.ImageViewerState
 import kotlinx.coroutines.launch
 
 class PickerPreviewerState internal constructor() {
@@ -161,50 +166,54 @@ fun PickerPreviewer(
         imageLoader = {
             hugeImageLoader(showList[it].path ?: "")
         },
-        onTap = {
-            fullScreen = !fullScreen
+        detectGesture = {
+            onTap = {
+                fullScreen = !fullScreen
+            }
         },
-        foreground = { size, page ->
-            PreviewForeground(
-                // 这里的page必须用目标的page
-                index = previewerState.index,
-                size = size,
-                limit = limit,
-                filled = filled,
-                showList = showList,
-                checkList = checkList,
-                previewListMode = previewListMode,
-                fullScreen = fullScreen,
-                imageLoader = imageLoader,
-                onBack = {
-                    scope.launch {
-                        previewerState.hide()
+        previewerLayer = {
+            foreground = { size, page ->
+                PreviewForeground(
+                    // 这里的page必须用目标的page
+                    index = previewerState.index,
+                    size = size,
+                    limit = limit,
+                    filled = filled,
+                    showList = showList,
+                    checkList = checkList,
+                    previewListMode = previewListMode,
+                    fullScreen = fullScreen,
+                    imageLoader = imageLoader,
+                    onBack = {
+                        scope.launch {
+                            previewerState.hide()
+                        }
+                    },
+                    commit = commit,
+                    onCheck = onCheck,
+                    onPreviewItemClick = {
+                        val index = showList.indexOf(it)
+                        if (index == -1) return@PreviewForeground
+                        scope.launch {
+                            previewerState.scroll(index)
+                        }
                     }
-                },
-                commit = commit,
-                onCheck = onCheck,
-                onPreviewItemClick = {
-                    val index = showList.indexOf(it)
-                    if (index == -1) return@PreviewForeground
-                    scope.launch {
-                        previewerState.scroll(index)
+                )
+            }
+            background = { _, _ ->
+                val backgroundColor by animateColorAsState(
+                    targetValue = if (fullScreen) {
+                        ConfigContent.current.backgroundColorDark
+                    } else {
+                        ConfigContent.current.backgroundColor
                     }
-                }
-            )
-        },
-        background = { _, _ ->
-            val backgroundColor by animateColorAsState(
-                targetValue = if (fullScreen) {
-                    ConfigContent.current.backgroundColorDark
-                } else {
-                    ConfigContent.current.backgroundColor
-                }
-            )
-            Box(
-                modifier = Modifier
-                    .background(backgroundColor)
-                    .fillMaxSize()
-            )
+                )
+                Box(
+                    modifier = Modifier
+                        .background(backgroundColor)
+                        .fillMaxSize()
+                )
+            }
         },
         currentViewerState = {
             imageState = it
