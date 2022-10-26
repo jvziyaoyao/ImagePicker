@@ -1,25 +1,26 @@
 package com.origeek.pickerDemo
 
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.lifecycle.ViewModel
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.registerImagePicker
 import com.origeek.imagePicker.ui.rememberCoilImagePainter
 import com.origeek.imagePicker.ui.rememberHugeImagePainter
+import com.origeek.imagePicker.util.findWindow
 import com.origeek.imagePicker.util.hideSystemUI
 import com.origeek.imagePicker.util.showSystemUI
 import com.origeek.imageViewer.previewer.ImagePreviewer
@@ -33,22 +34,24 @@ import kotlinx.coroutines.launch
 import java.util.*
 import java.util.stream.Collectors
 
-const val SYSTEM_UI_VISIBILITY = "SYSTEM_UI_VISIBILITY"
-
 data class SelectedImage(
     val id: String,
     val path: String,
 )
 
+class SelectorViewModel : ViewModel() {
+
+    val selectedList = mutableStateListOf<SelectedImage>()
+
+}
+
 class SelectorActivity : BaseActivity() {
 
-    private var systemUIVisible = true
-
-    private val selectedList = mutableStateListOf<SelectedImage>()
+    private val viewModel by viewModels<SelectorViewModel>()
 
     private val launcher = registerImagePicker { paths ->
         paths?.let {
-            selectedList.addAll(paths.stream().map {
+            viewModel.selectedList.addAll(paths.stream().map {
                 SelectedImage(
                     id = UUID.randomUUID().toString(),
                     path = it,
@@ -61,10 +64,7 @@ class SelectorActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setBasicContent {
             SelectorBody(
-                list = selectedList,
-                onImageViewVisible = {
-                    handlerSystemUI(!it)
-                }
+                list = viewModel.selectedList,
             ) {
                 val config = ImagePickerConfig(
                     limit = 9,
@@ -75,35 +75,25 @@ class SelectorActivity : BaseActivity() {
         }
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean(SYSTEM_UI_VISIBILITY, systemUIVisible)
-        super.onSaveInstanceState(outState)
-    }
-
-    private fun handlerSystemUI(visible: Boolean) {
-        systemUIVisible = visible
-        if (systemUIVisible) {
-            showSystemUI(window)
-        } else {
-            hideSystemUI(window)
-        }
-    }
-
 }
 
 @Composable
 fun SelectorBody(
     list: List<SelectedImage>,
-    onImageViewVisible: (Boolean) -> Unit = {},
     goPicker: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val imageViewerState = rememberPreviewerState()
     val getKey: () -> Any = { list[imageViewerState.currentPage].id }
     imageViewerState.enableVerticalDrag { getKey() }
+    val window = LocalContext.current.findWindow()
     LaunchedEffect(key1 = imageViewerState.visibleTarget, block = {
-        if (imageViewerState.visibleTarget != null) {
-            onImageViewVisible(imageViewerState.visibleTarget ?: imageViewerState.visible)
+        if (window != null) {
+            if (imageViewerState.visibleTarget == true) {
+                hideSystemUI(window)
+            } else if (imageViewerState.visibleTarget == false) {
+                showSystemUI(window)
+            }
         }
     })
     Box(
@@ -168,7 +158,6 @@ fun SelectorBody(
         imageLoader = { index ->
             val path = list[index].path
             rememberHugeImagePainter(path = path)
-                ?: rememberCoilImagePainter(path = path)
         },
         detectGesture = {
             onTap = {

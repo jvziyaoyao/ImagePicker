@@ -289,7 +289,6 @@ fun PickerContent(
                     DecoderMineType.JPEG.mimeType,
                     DecoderMineType.PNG.mimeType -> {
                         rememberHugeImagePainter(path = it)
-                            ?: rememberCoilImagePainter(path = it)
                     }
                     DecoderMineType.WEBP.mimeType -> {
                         // 判断图片是否为动态的图片，如果是，就不能用超大图预览
@@ -298,7 +297,6 @@ fun PickerContent(
                             rememberCoilImagePainter(path = it)
                         } else {
                             rememberHugeImagePainter(path = it)
-                                ?: rememberCoilImagePainter(path = it)
                         }
                     }
                     DecoderMineType.SVG.mimeType -> {

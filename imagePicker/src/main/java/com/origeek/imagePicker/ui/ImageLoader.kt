@@ -5,7 +5,6 @@ import android.os.Build.VERSION.SDK_INT
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.GifDecoder
@@ -51,8 +50,8 @@ fun rememberCoilImagePainter(
 
 @Composable
 fun rememberHugeImagePainter(path: String): Any? {
-    val defaultPainter = painterResource(id = R.drawable.ic_empty_image)
-    var painter by remember { mutableStateOf<Any?>(defaultPainter) }
+    var res by remember { mutableStateOf<Any?>(null) }
+    var isError by remember { mutableStateOf(false) }
     LaunchedEffect(path) {
         launch(Dispatchers.IO) {
             val imageDecoder = try {
@@ -60,12 +59,20 @@ fun rememberHugeImagePainter(path: String): Any? {
                 ImageDecoder(decoder = decoder)
             } catch (e: Exception) {
                 e.printStackTrace()
+                isError = true
                 null
             }
             launch(Dispatchers.Main) {
-                painter = imageDecoder
+                res = imageDecoder
             }
         }
     }
-    return painter
+    DisposableEffect(Unit) {
+        onDispose {
+            if (res is ImageDecoder) {
+                (res as ImageDecoder).release()
+            }
+        }
+    }
+    return if (!isError) res else rememberCoilImagePainter(path = path)
 }

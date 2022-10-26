@@ -73,6 +73,9 @@ class PickerPreviewerState internal constructor() {
     // 预览组件状态
     internal lateinit var state: ImagePreviewerState
 
+    internal val currentViewerState: ImageViewerState?
+        get() = state.imageViewerState
+
     private var isOpenTransform: Boolean = false
 
     fun clearTransformItems() = state.clearTransformItems()
@@ -118,7 +121,7 @@ fun PickerPreviewer(
     filled: Boolean,
     previewListMode: PreviewListMode,
     imageLoader: @Composable (model: Any) -> Painter,
-    hugeImageLoader: @Composable (path: String) -> Any,
+    hugeImageLoader: @Composable (path: String) -> Any?,
     showList: List<PhotoQueryEntity>,
     checkList: List<PhotoQueryEntity>,
     onCheck: (PhotoQueryEntity, Boolean) -> Unit,
@@ -127,10 +130,9 @@ fun PickerPreviewer(
     val scope = rememberCoroutineScope()
     val window = LocalContext.current.findWindow()
     var fullScreen by rememberSaveable { mutableStateOf(false) }
-    var imageState by remember { mutableStateOf<ImageViewerState?>(null) }
     var scale by remember { mutableStateOf(1F) }
-    LaunchedEffect(key1 = imageState?.scale?.value) {
-        imageState?.let {
+    LaunchedEffect(key1 = previewerState.currentViewerState?.scale?.value) {
+        previewerState.currentViewerState?.let {
             if (it.scale.value > scale && it.scale.value > 1F) {
                 fullScreen = true
             }
@@ -172,11 +174,11 @@ fun PickerPreviewer(
             }
         },
         previewerLayer = {
-            foreground = { size, page ->
+            foreground = { page ->
                 PreviewForeground(
                     // 这里的page必须用目标的page
                     index = previewerState.index,
-                    size = size,
+                    size = showList.size,
                     limit = limit,
                     filled = filled,
                     showList = showList,
@@ -200,7 +202,7 @@ fun PickerPreviewer(
                     }
                 )
             }
-            background = { _, _ ->
+            background = {
                 val backgroundColor by animateColorAsState(
                     targetValue = if (fullScreen) {
                         ConfigContent.current.backgroundColorDark
@@ -214,9 +216,6 @@ fun PickerPreviewer(
                         .fillMaxSize()
                 )
             }
-        },
-        currentViewerState = {
-            imageState = it
         },
         exit = fadeOut(animationSpec = spring(stiffness = 1000F))
                 + scaleOut(

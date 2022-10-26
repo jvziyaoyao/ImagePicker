@@ -1,5 +1,6 @@
 package com.origeek.imagePicker.vm
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -10,8 +11,10 @@ import com.origeek.imagePicker.config.NO_LIMIT
 import com.origeek.imagePicker.domain.model.AlbumEntity
 import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.domain.useCase.AlbumUseCase
+import java.util.*
 import java.util.function.Function
 import java.util.stream.Collectors
+import kotlin.collections.ArrayList
 
 class PickerViewModel(
     private val albumUseCase: AlbumUseCase,
@@ -91,8 +94,20 @@ class PickerViewModel(
     suspend fun initial() {
         loading = true
         loadFromTemp()
+
+        Log.i("TAG", "initial: ------------------>")
+        albumList.forEach {
+            Log.i("TAG", "initial: albumList ${it.name} - ${UUID.randomUUID()}")
+        }
+
         if (albumList.isNotEmpty()) loading = false
         loadFromDatabase()
+
+        Log.i("TAG", "initial: ------------------>")
+        albumList.forEach {
+            Log.i("TAG", "initial: albumList ${it.name} - ${UUID.randomUUID()}")
+        }
+
         loading = false
     }
 
@@ -101,6 +116,11 @@ class PickerViewModel(
      */
     suspend fun update() {
         loadFromDatabase()
+
+        Log.i("TAG", "initial: ------------------>")
+        albumList.forEach {
+            Log.i("TAG", "initial: albumList ${it.name} - ${UUID.randomUUID()}")
+        }
     }
 
     /**
