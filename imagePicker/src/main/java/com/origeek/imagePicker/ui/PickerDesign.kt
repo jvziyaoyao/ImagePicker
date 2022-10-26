@@ -2,7 +2,6 @@ package com.origeek.imagePicker.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -114,14 +113,17 @@ fun PickerBody(
                 PickerContent(
                     albums = viewModel.albumList,
                     checkList = viewModel.checkList,
+                    previewList = viewModel.previewList,
                     albumsLoading = viewModel.loading,
                     selectedAlbumIndex = viewModel.selectedAlbumIndex,
                     limit = viewModel.pickerConfig?.limit ?: NO_LIMIT,
                     filled = viewModel.checkFilled(),
                     onAlbumClick = { viewModel.selectedAlbumIndex = it },
+                    onPreview = {
+                        viewModel.updatePreviewList(it)
+                    },
                     onBack = onBack,
                     onCheck = { selectedItem, check ->
-                        Log.i("TAG", "PickerBody: selectedItem.path ${selectedItem.path}")
                         viewModel.checkPhoto(selectedItem, check)
                     },
                     commit = commit
@@ -146,10 +148,12 @@ fun rememberImageLoader(model: Any): Painter {
 fun PickerContent(
     albums: List<AlbumEntity>,
     checkList: List<PhotoQueryEntity>,
+    previewList: List<PhotoQueryEntity>,
     albumsLoading: Boolean,
     selectedAlbumIndex: Int,
     limit: Int,
     filled: Boolean,
+    onPreview: (List<PhotoQueryEntity>) -> Unit,
     onCheck: (PhotoQueryEntity, Boolean) -> Unit,
     onAlbumClick: (Int) -> Unit,
     onBack: () -> Unit,
@@ -158,10 +162,8 @@ fun PickerContent(
     val scope = rememberCoroutineScope()
     // 当前预览列表
     val list = remember { mutableStateListOf<PhotoQueryEntity>() }
-    // 显示列表
-    val showList = remember { mutableStateListOf<PhotoQueryEntity>() }
     // 图片预览状态
-    val imagePreviewerState = rememberPickerPreviewerState { showList[it].path ?: "" }
+    val imagePreviewerState = rememberPickerPreviewerState { previewList[it].path ?: "" }
     // 导航栏大小
     var navSize by remember { mutableStateOf(IntSize(0, 0)) }
     // 菜单栏大小
@@ -197,12 +199,12 @@ fun PickerContent(
         itemState: TransformItemState? = null
     ) {
         previewListMode = mode
-        showList.clear()
-        val addList = when (mode) {
-            PreviewListMode.IMAGE_LIST -> list
-            PreviewListMode.CHECKED_LIST -> checkList
-        }
-        showList.addAll(addList)
+        onPreview(
+            when (mode) {
+                PreviewListMode.IMAGE_LIST -> list
+                PreviewListMode.CHECKED_LIST -> checkList
+            }
+        )
         imagePreviewerState.show(index, itemState)
     }
 
@@ -314,7 +316,7 @@ fun PickerContent(
                 }
             },
             onCheck = onCheck,
-            showList = showList,
+            showList = previewList,
             checkList = checkList,
             previewListMode = previewListMode,
             commit = commit,

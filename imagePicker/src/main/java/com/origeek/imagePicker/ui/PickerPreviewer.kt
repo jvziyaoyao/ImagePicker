@@ -38,7 +38,6 @@ import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.util.findWindow
 import com.origeek.imagePicker.util.hideSystemUI
 import com.origeek.imagePicker.util.showSystemUI
-import com.origeek.imageViewer.*
 import com.origeek.imageViewer.previewer.ImagePreviewer
 import com.origeek.imageViewer.previewer.ImagePreviewerState
 import com.origeek.imageViewer.previewer.TransformItemState
@@ -105,8 +104,8 @@ class PickerPreviewerState internal constructor() {
 @Composable
 fun rememberPickerPreviewerState(getKey: (Int) -> Any): PickerPreviewerState {
     val previewerState = rememberPreviewerState()
-    previewerState.enableVerticalDrag { getKey(it) }
     val pickerState = remember { PickerPreviewerState() }
+    previewerState.enableVerticalDrag { getKey(it) }
     pickerState.getKey = getKey
     pickerState.state = previewerState
     return pickerState
