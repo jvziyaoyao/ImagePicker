@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.provider.MediaStore
 import com.origeek.imagePicker.domain.model.PhotoQueryEntity
-import com.origeek.imagePicker.util.ContextUtil
-import com.origeek.imagePicker.util.joiner
+import com.origeek.ui.common.util.ContextUtil
+import com.origeek.ui.common.util.joiner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

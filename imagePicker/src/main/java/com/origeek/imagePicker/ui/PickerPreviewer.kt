@@ -35,14 +35,14 @@ import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.NO_LIMIT
 import com.origeek.imagePicker.domain.model.PhotoQueryEntity
-import com.origeek.imagePicker.util.findWindow
-import com.origeek.imagePicker.util.hideSystemUI
-import com.origeek.imagePicker.util.showSystemUI
 import com.origeek.imageViewer.previewer.ImagePreviewer
 import com.origeek.imageViewer.previewer.ImagePreviewerState
 import com.origeek.imageViewer.previewer.TransformItemState
 import com.origeek.imageViewer.previewer.rememberPreviewerState
 import com.origeek.imageViewer.viewer.ImageViewerState
+import com.origeek.ui.common.util.findWindow
+import com.origeek.ui.common.util.hideSystemUI
+import com.origeek.ui.common.util.showSystemUI
 import kotlinx.coroutines.launch
 
 class PickerPreviewerState internal constructor() {

@@ -2,13 +2,9 @@ package com.origeek.imagePicker.domain.repository
 
 import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.origeek.imagePicker.util.ContextUtil
 import com.origeek.imagePicker.util.getStoreData
 import com.origeek.imagePicker.util.setStoreData
 import kotlinx.coroutines.flow.first
-import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
 
 /**
  * @program: ImagePicker

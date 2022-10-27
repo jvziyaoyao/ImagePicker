@@ -13,8 +13,8 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import coil.size.Size
 import com.origeek.imagePicker.R
-import com.origeek.imagePicker.util.ContextUtil
 import com.origeek.imageViewer.viewer.ImageDecoder
+import com.origeek.ui.common.util.ContextUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

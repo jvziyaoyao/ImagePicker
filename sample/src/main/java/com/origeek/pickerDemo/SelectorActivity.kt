@@ -19,16 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.registerImagePicker
 import com.origeek.imagePicker.ui.rememberCoilImagePainter
 import com.origeek.imagePicker.ui.rememberHugeImagePainter
-import com.origeek.imagePicker.util.findWindow
-import com.origeek.imagePicker.util.hideSystemUI
-import com.origeek.imagePicker.util.showSystemUI
 import com.origeek.imageViewer.previewer.ImagePreviewer
 import com.origeek.imageViewer.previewer.TransformImageView
 import com.origeek.imageViewer.previewer.rememberPreviewerState
@@ -36,7 +31,9 @@ import com.origeek.imageViewer.previewer.rememberTransformItemState
 import com.origeek.pickerDemo.base.BaseActivity
 import com.origeek.ui.common.compose.LazyGridLayout
 import com.origeek.ui.common.compose.ScaleGrid
-import kotlinx.coroutines.Dispatchers
+import com.origeek.ui.common.util.findWindow
+import com.origeek.ui.common.util.hideSystemUI
+import com.origeek.ui.common.util.showSystemUI
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.stream.Collectors
