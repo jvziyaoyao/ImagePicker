@@ -1,6 +1,11 @@
 package com.origeek.imagePicker.domain.repository
 
+import android.content.Context
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.origeek.imagePicker.util.ContextUtil
+import com.origeek.imagePicker.util.getStoreData
+import com.origeek.imagePicker.util.setStoreData
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
@@ -17,38 +22,31 @@ import java.io.FileWriter
 interface TempRepo {
 
     /**
-     * 保存内容到缓存中
-     * @param data String
+     * 报错
+     * @param key String
+     * @param json String
      */
-    fun saveToTemp(data: String)
+    suspend fun store(key: String, json: String)
 
     /**
-     * 从缓存中加载内容
-     * @return String
+     * 从缓存中加载
+     * @param key String
+     * @return String?
      */
-    fun loadFromTemp(): String
+    suspend fun restore(key: String): String?
 
 }
 
-class TempRepoImpl : TempRepo {
+class TempRepoImpl(
+    private val context: Context
+) : TempRepo {
 
-    private val tempFilePath = "${ContextUtil.getApplicationByReflect().cacheDir}/photos.json"
-
-    override fun saveToTemp(data: String) {
-        val file = File(tempFilePath)
-        val writer = FileWriter(file)
-        writer.write(data)
-        writer.flush()
-        writer.close()
+    override suspend fun store(key: String, json: String) {
+        context.setStoreData(stringPreferencesKey(key), json)
     }
 
-    override fun loadFromTemp(): String {
-        val file = File(tempFilePath)
-        if (!file.exists()) return ""
-        val reader = FileReader(file)
-        val json = reader.readText()
-        reader.close()
-        return json
+    override suspend fun restore(key: String): String? {
+        return context.getStoreData(stringPreferencesKey(key)).first()
     }
 
 }

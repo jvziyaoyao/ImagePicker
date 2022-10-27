@@ -45,15 +45,17 @@ class AlbumUseCaseImpl(
     private val tempRepo: TempRepo,
 ) : AlbumUseCase {
 
-    private fun copyFromTemp(): List<PhotoQueryEntity> {
-        val json = tempRepo.loadFromTemp()
+    private val tempStoreKey = "AlbumTempStoreKey"
+
+    private suspend fun copyFromTemp(): List<PhotoQueryEntity> {
+        val json = tempRepo.restore(tempStoreKey) ?: return emptyList()
         if (json.isEmpty()) return emptyList()
         return Gson().fromJson(json, object : TypeToken<List<PhotoQueryEntity>>() {}.type)
     }
 
-    private fun copyToTemp(photos: List<PhotoQueryEntity>) {
+    private suspend fun copyToTemp(photos: List<PhotoQueryEntity>) {
         val json = Gson().toJson(photos)
-        tempRepo.saveToTemp(json)
+        tempRepo.store(tempStoreKey, json)
     }
 
     private suspend fun getLatestList(photos: List<PhotoQueryEntity>): AlbumEntity? =

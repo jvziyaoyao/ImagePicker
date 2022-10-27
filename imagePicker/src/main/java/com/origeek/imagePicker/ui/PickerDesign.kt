@@ -234,7 +234,6 @@ fun PickerContent(
                 .fillMaxSize()
                 .padding(
                     top = LocalDensity.current.run { navSize.height.toDp() },
-                    bottom = LocalDensity.current.run { tabSize.height.toDp() },
                 ),
             lazyState = gridState,
             list = list,
@@ -243,6 +242,7 @@ fun PickerContent(
             checkList = checkList,
             onCheck = onCheck,
             previewerState = imagePreviewerState,
+            contentPadding = PaddingValues(bottom = LocalDensity.current.run { tabSize.height.toDp() }),
             imageLoader = {
                 rememberImageLoader(it)
             },

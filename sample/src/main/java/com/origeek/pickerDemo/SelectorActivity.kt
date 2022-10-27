@@ -2,19 +2,25 @@ package com.origeek.pickerDemo
 
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.registerImagePicker
@@ -30,6 +36,7 @@ import com.origeek.imageViewer.previewer.rememberTransformItemState
 import com.origeek.pickerDemo.base.BaseActivity
 import com.origeek.ui.common.compose.LazyGridLayout
 import com.origeek.ui.common.compose.ScaleGrid
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.stream.Collectors
@@ -39,24 +46,19 @@ data class SelectedImage(
     val path: String,
 )
 
-class SelectorViewModel : ViewModel() {
-
-    val selectedList = mutableStateListOf<SelectedImage>()
-
-}
-
 class SelectorActivity : BaseActivity() {
 
     private val viewModel by viewModels<SelectorViewModel>()
 
     private val launcher = registerImagePicker { paths ->
         paths?.let {
-            viewModel.selectedList.addAll(paths.stream().map {
+            val resultList = paths.stream().map {
                 SelectedImage(
                     id = UUID.randomUUID().toString(),
                     path = it,
                 )
-            }.collect(Collectors.toList()))
+            }.collect(Collectors.toList())
+            viewModel.addList(resultList)
         }
     }
 
@@ -77,6 +79,9 @@ class SelectorActivity : BaseActivity() {
 
 }
 
+val backgroundColor = Color(0xFFF4F4F4)
+val gridMaskerColor = Color(0x0F000000)
+
 @Composable
 fun SelectorBody(
     list: List<SelectedImage>,
@@ -96,13 +101,14 @@ fun SelectorBody(
             }
         }
     })
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
+            .background(backgroundColor)
             .systemBarsPadding()
             .statusBarsPadding()
     ) {
-        val lineCount = 4
+        val lineCount = if (maxWidth > maxHeight) 8 else 4
         val p = 0.6.dp
         LazyGridLayout(
             modifier = Modifier.fillMaxSize(),
@@ -130,7 +136,17 @@ fun SelectorBody(
                         key = selectedImage.id
                     )
                 }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(gridMaskerColor)
+                )
             }
+        }
+    }
+    if (list.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = "🙌 空空如也")
         }
     }
     ConstraintLayout(

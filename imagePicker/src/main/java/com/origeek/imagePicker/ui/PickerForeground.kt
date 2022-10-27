@@ -109,7 +109,10 @@ fun PickerForeground(
         ) {
             BottomHandler(
                 modifier = Modifier
-                    .background(ConfigContent.current.surfaceColor),
+                    .background(ConfigContent.current.surfaceColor)
+                    .pointerInput(Unit) {
+                        detectTapGestures { }
+                    },
                 list = albums,
                 imageLoader = imageLoader,
                 onAlbumClick = onAlbumClick,

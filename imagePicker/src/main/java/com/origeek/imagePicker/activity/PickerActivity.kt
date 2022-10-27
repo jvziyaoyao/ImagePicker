@@ -30,7 +30,9 @@ class PickerActivity : ComponentActivity(), CoroutineScope by MainScope() {
                 return PickerViewModel(
                     AlbumUseCaseImpl(
                         imageRepo = ImageRepoImpl(),
-                        tempRepo = TempRepoImpl(),
+                        tempRepo = TempRepoImpl(
+                            this@PickerActivity
+                        ),
                     )
                 ) as T
             }

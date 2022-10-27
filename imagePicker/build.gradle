@@ -70,6 +70,8 @@ dependencies {
     implementation "com.github.jvziyaoyao:ImageViewer:$image_viewer_version"
     implementation "com.github.jvziyaoyao:OrigeekUI:$origeek_ui_version"
 
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
+
     implementation 'io.coil-kt:coil:2.0.0-rc03'
     implementation 'io.coil-kt:coil-svg:2.0.0-rc03'
     implementation 'io.coil-kt:coil-gif:2.0.0-rc03'
