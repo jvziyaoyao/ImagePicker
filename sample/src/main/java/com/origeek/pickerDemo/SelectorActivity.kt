@@ -10,9 +10,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -85,10 +83,13 @@ fun SelectorBody(
     goPicker: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val imageViewerState = rememberPreviewerState()
-    val getKey: () -> Any = { list[imageViewerState.currentPage].id }
-    imageViewerState.enableVerticalDrag { getKey() }
+    var currentPage by remember { mutableStateOf(0) }
+    val getKey: () -> Any = { list[currentPage].id }
+    val imageViewerState = rememberPreviewerState(enableVerticalDrag = true) { getKey() }
     val window = LocalContext.current.findWindow()
+    LaunchedEffect(imageViewerState.currentPage) {
+        currentPage = imageViewerState.currentPage
+    }
     LaunchedEffect(key1 = imageViewerState.visibleTarget, block = {
         if (window != null) {
             if (imageViewerState.visibleTarget == true) {
@@ -175,7 +176,7 @@ fun SelectorBody(
         detectGesture = {
             onTap = {
                 scope.launch {
-                    imageViewerState.closeTransform(key = getKey())
+                    imageViewerState.closeTransform()
                 }
             }
         },

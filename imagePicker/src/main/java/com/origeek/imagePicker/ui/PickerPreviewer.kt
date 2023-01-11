@@ -90,7 +90,7 @@ class PickerPreviewerState internal constructor() {
 
     suspend fun hide() {
         if (getKey != null && isOpenTransform) {
-            state.closeTransform(getKey!!.invoke(index))
+            state.closeTransform()
         } else {
             state.close()
         }
@@ -103,9 +103,10 @@ class PickerPreviewerState internal constructor() {
 
 @Composable
 fun rememberPickerPreviewerState(getKey: (Int) -> Any): PickerPreviewerState {
-    val previewerState = rememberPreviewerState()
+    val previewerState = rememberPreviewerState(enableVerticalDrag = true) {
+        getKey(it)
+    }
     val pickerState = remember { PickerPreviewerState() }
-    previewerState.enableVerticalDrag { getKey(it) }
     pickerState.getKey = getKey
     pickerState.state = previewerState
     return pickerState
