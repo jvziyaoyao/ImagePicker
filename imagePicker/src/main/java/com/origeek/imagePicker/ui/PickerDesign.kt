@@ -2,20 +2,14 @@ package com.origeek.imagePicker.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -28,12 +22,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.rememberAsyncImagePainter
 import coil.size.Size
 import com.google.accompanist.insets.ProvideWindowInsets
@@ -45,14 +41,21 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.hjq.permissions.XXPermissions
 import com.origeek.imagePicker.config.ImagePickerConfig
 import com.origeek.imagePicker.config.NO_LIMIT
-import com.origeek.imagePicker.model.AlbumEntity
-import com.origeek.imagePicker.model.PhotoQueryEntity
-import com.origeek.imagePicker.util.*
+import com.origeek.imagePicker.domain.model.AlbumEntity
+import com.origeek.imagePicker.domain.model.PhotoQueryEntity
 import com.origeek.imagePicker.vm.PickerViewModel
+import com.origeek.imageViewer.previewer.TransformImageView
+import com.origeek.imageViewer.previewer.TransformItemState
+import com.origeek.imageViewer.previewer.rememberTransformItemState
+import com.origeek.ui.common.compose.LazyGridLayout
+import com.origeek.ui.common.compose.LazyGridLayoutState
+import com.origeek.ui.common.compose.ScaleGrid
+import com.origeek.ui.common.compose.rememberLazyGridLayoutState
+import com.origeek.ui.common.util.WebpUtil
+import com.origeek.ui.common.util.getMimeType
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
-import kotlin.math.ceil
 
 // 需要权限
 val permissions = listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -77,6 +80,21 @@ fun PickerBody(
     onBack: () -> Unit,
     commit: () -> Unit,
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                scope.launch {
+                    viewModel.update()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     CompositionLocalProvider(ConfigContent provides config) {
         ProvideWindowInsets {
             val systemUiController = rememberSystemUiController()
@@ -88,19 +106,24 @@ fun PickerBody(
                 )
             }
             PickerPermissions({
-                if (it && viewModel.albumList.isNullOrEmpty()) viewModel.initial()
+                scope.launch {
+                    if (it && viewModel.albumList.isEmpty()) viewModel.initial()
+                }
             }) {
                 PickerContent(
                     albums = viewModel.albumList,
                     checkList = viewModel.checkList,
+                    previewList = viewModel.previewList,
                     albumsLoading = viewModel.loading,
                     selectedAlbumIndex = viewModel.selectedAlbumIndex,
                     limit = viewModel.pickerConfig?.limit ?: NO_LIMIT,
                     filled = viewModel.checkFilled(),
                     onAlbumClick = { viewModel.selectedAlbumIndex = it },
+                    onPreview = {
+                        viewModel.updatePreviewList(it)
+                    },
                     onBack = onBack,
                     onCheck = { selectedItem, check ->
-                        Log.i("TAG", "PickerBody: ${selectedItem.path}")
                         viewModel.checkPhoto(selectedItem, check)
                     },
                     commit = commit
@@ -125,10 +148,12 @@ fun rememberImageLoader(model: Any): Painter {
 fun PickerContent(
     albums: List<AlbumEntity>,
     checkList: List<PhotoQueryEntity>,
+    previewList: List<PhotoQueryEntity>,
     albumsLoading: Boolean,
     selectedAlbumIndex: Int,
     limit: Int,
     filled: Boolean,
+    onPreview: (List<PhotoQueryEntity>) -> Unit,
     onCheck: (PhotoQueryEntity, Boolean) -> Unit,
     onAlbumClick: (Int) -> Unit,
     onBack: () -> Unit,
@@ -136,34 +161,51 @@ fun PickerContent(
 ) {
     val scope = rememberCoroutineScope()
     // 当前预览列表
-    val list = if (albums.isEmpty()) emptyList() else albums[selectedAlbumIndex].list
+    val list = remember { mutableStateListOf<PhotoQueryEntity>() }
     // 图片预览状态
-    val imagePreviewerState = rememberPickerPreviewerState()
+    val imagePreviewerState = rememberPickerPreviewerState { previewList[it].path ?: "" }
     // 导航栏大小
     var navSize by remember { mutableStateOf(IntSize(0, 0)) }
     // 菜单栏大小
     var tabSize by remember { mutableStateOf(IntSize(0, 0)) }
     // 图片网格状态
-    val gridState = rememberLazyListState()
+    val gridState = rememberLazyGridLayoutState()
     // 当前预览模式，预览选择列表，预览当前列表
     var previewListMode by rememberSaveable { mutableStateOf(PreviewListMode.IMAGE_LIST) }
-    // 显示列表
-    val showList = remember { mutableStateListOf<PhotoQueryEntity>() }
     // 视图大小
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    // 响应list的变化
+    val listHash = if (albums.isEmpty()) 0 else albums[selectedAlbumIndex].list.hashCode()
+    // 需要通过这个途径，showPreviewer中的list才能够响应
+    LaunchedEffect(
+        key1 = selectedAlbumIndex,
+        key2 = albums.size,
+        key3 = listHash,
+    ) {
+        if (albums.isNotEmpty()) {
+            list.clear()
+            list.addAll(albums[selectedAlbumIndex].list)
+            // 清除transform预览的记录
+            imagePreviewerState.clearTransformItems()
+        }
+    }
 
     /**
      * 显示预览方法
      */
-    fun showPreviewer(mode: PreviewListMode, index: Int) {
+    suspend fun showPreviewer(
+        mode: PreviewListMode,
+        index: Int,
+        itemState: TransformItemState? = null
+    ) {
         previewListMode = mode
-        showList.clear()
-        val addList = when (mode) {
-            PreviewListMode.IMAGE_LIST -> list
-            PreviewListMode.CHECKED_LIST -> checkList
-        }
-        showList.addAll(addList)
-        imagePreviewerState.show(index)
+        onPreview(
+            when (mode) {
+                PreviewListMode.IMAGE_LIST -> list
+                PreviewListMode.CHECKED_LIST -> checkList
+            }
+        )
+        imagePreviewerState.show(index, itemState)
     }
 
     Box(
@@ -192,18 +234,22 @@ fun PickerContent(
                 .fillMaxSize()
                 .padding(
                     top = LocalDensity.current.run { navSize.height.toDp() },
-                    bottom = LocalDensity.current.run { tabSize.height.toDp() },
                 ),
-            lazyListState = gridState,
+            lazyState = gridState,
             list = list,
+            getKey = { list[it].path ?: "" },
             filled = filled,
             checkList = checkList,
             onCheck = onCheck,
+            previewerState = imagePreviewerState,
+            contentPadding = PaddingValues(bottom = LocalDensity.current.run { tabSize.height.toDp() }),
             imageLoader = {
                 rememberImageLoader(it)
             },
-        ) { index ->
-            showPreviewer(PreviewListMode.IMAGE_LIST, index)
+        ) { index, itemState ->
+            scope.launch {
+                showPreviewer(PreviewListMode.IMAGE_LIST, index, itemState)
+            }
         }
         PickerForeground(
             albums = albums,
@@ -223,7 +269,9 @@ fun PickerContent(
             },
             onBack = onBack,
             onPreview = {
-                showPreviewer(PreviewListMode.CHECKED_LIST, 0)
+                scope.launch {
+                    showPreviewer(PreviewListMode.CHECKED_LIST, 0, null)
+                }
             },
             onNavSize = { navSize = it },
             onTabSize = { tabSize = it },
@@ -238,12 +286,11 @@ fun PickerContent(
                 rememberImageLoader(it)
             },
             hugeImageLoader = {
-                val file by remember { mutableStateOf(File(it)) }
+                val file = File(it)
                 when (file.getMimeType()) {
                     DecoderMineType.JPEG.mimeType,
                     DecoderMineType.PNG.mimeType -> {
                         rememberHugeImagePainter(path = it)
-                            ?: rememberCoilImagePainter(path = it)
                     }
                     DecoderMineType.WEBP.mimeType -> {
                         // 判断图片是否为动态的图片，如果是，就不能用超大图预览
@@ -252,7 +299,6 @@ fun PickerContent(
                             rememberCoilImagePainter(path = it)
                         } else {
                             rememberHugeImagePainter(path = it)
-                                ?: rememberCoilImagePainter(path = it)
                         }
                     }
                     DecoderMineType.SVG.mimeType -> {
@@ -270,7 +316,7 @@ fun PickerContent(
                 }
             },
             onCheck = onCheck,
-            showList = showList,
+            showList = previewList,
             checkList = checkList,
             previewListMode = previewListMode,
             commit = commit,
@@ -282,22 +328,24 @@ fun PickerContent(
 @Composable
 fun CenterGrid(
     modifier: Modifier = Modifier,
-    lazyListState: LazyListState = rememberLazyListState(),
+    lazyState: LazyGridLayoutState = rememberLazyGridLayoutState(),
     list: List<PhotoQueryEntity>,
     checkList: List<PhotoQueryEntity>,
     filled: Boolean = false,
+    previewerState: PickerPreviewerState,
+    getKey: (Int) -> Any,
     imageLoader: @Composable (model: Any) -> Painter,
     onCheck: (PhotoQueryEntity, Boolean) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
-    onItemClick: (Int) -> Unit,
+    onItemClick: (Int, TransformItemState) -> Unit,
 ) {
     val lineCount = 4
     val p = 0.6.dp
     Box(modifier = modifier.fillMaxSize()) {
-        GridLayout(
+        LazyGridLayout(
             columns = lineCount,
             size = list.size,
-            state = lazyListState,
+            state = lazyState,
             contentPadding = contentPadding
         ) { index ->
             val item = list[index]
@@ -312,15 +360,20 @@ fun CenterGrid(
                             end = if (index % lineCount == lineCount - 1) 0.dp else p
                         )
                 ) {
+                    val itemState = rememberTransformItemState()
                     ImageGrid(
                         image = item.path!!,
+                        key = getKey(index),
                         check = checkList.contains(item),
                         filled = filled,
                         imageLoader = imageLoader,
+                        itemState = itemState,
+                        previewerState = previewerState,
                         onChangeAction = {
                             onCheck(item, !checkList.contains(item))
-                        }) {
-                        onItemClick(index)
+                        },
+                    ) {
+                        onItemClick(index, itemState)
                     }
                 }
             }
@@ -330,80 +383,56 @@ fun CenterGrid(
 }
 
 @Composable
-fun GridLayout(
-    modifier: Modifier = Modifier,
-    columns: Int,
-    size: Int,
-    state: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(),
-    block: @Composable (Int) -> Unit,
-) {
-    val line = ceil(size.toDouble() / columns).toInt()
-    LazyColumn(
-        modifier = modifier,
-        state = state,
-        content = {
-            items(count = line, key = { it }) { c ->
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    for (r in 0 until columns) {
-                        val index = c * columns + r
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                        ) {
-                            if (index < size) {
-                                block(index)
-                            }
-                        }
-                    }
-                }
-            }
-        }, contentPadding = contentPadding
-    )
-}
-
-@Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
     image: Any,
+    key: Any,
     check: Boolean,
     filled: Boolean = false,
     imageLoader: @Composable (model: Any) -> Painter,
+    itemState: TransformItemState,
+    previewerState: PickerPreviewerState,
     onChangeAction: () -> Unit = {},
     onClick: () -> Unit,
 ) {
-    Image(
-        modifier = modifier
-            .clickable {
-                onClick()
-            }
-            .fillMaxSize(),
-        painter = imageLoader(image),
-        contentScale = ContentScale.Crop,
-        contentDescription = null,
-    )
-    val maskerColor by animateColorAsState(
-        targetValue = if (check) {
-            ConfigContent.current.checkMaskerColor
-        } else {
-            ConfigContent.current.uncheckMaskerColor
-        }
-    )
     Box(
-        modifier = Modifier
-            .background(maskerColor)
-            .fillMaxSize(), contentAlignment = Alignment.TopCenter
+        modifier = modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
-            CheckButton(
-                check = check,
-                hideCircle = filled,
-                key = image,
-                onChangeAction = onChangeAction,
-                modifier = Modifier
-                    .size(32.dp)
-                    .padding(top = 4.dp, end = 4.dp)
+        ScaleGrid(onTap = {
+            onClick()
+        }) {
+            TransformImageView(
+                key = key,
+                painter = imageLoader(image),
+                itemState = itemState,
+                previewerState = previewerState.state,
             )
+        }
+        val maskerColor by animateColorAsState(
+            targetValue = if (check) {
+                ConfigContent.current.checkMaskerColor
+            } else {
+                ConfigContent.current.uncheckMaskerColor
+            }
+        )
+        Box(
+            modifier = Modifier
+                .background(maskerColor)
+                .fillMaxSize(), contentAlignment = Alignment.TopCenter
+        ) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
+                CheckButton(
+                    check = check,
+                    hideCircle = filled,
+                    key = image,
+                    onChangeAction = onChangeAction,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(top = 4.dp, end = 4.dp)
+                )
+            }
         }
     }
 }
@@ -466,16 +495,18 @@ fun PermissionNotGranted(permissionState: MultiplePermissionsState) {
     ) {
         Text(text = "👋 获取文件权限，以便访问本地相册！")
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            permissionState.launchMultiplePermissionRequest()
-        }, colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)) {
+        Button(
+            onClick = {
+                permissionState.launchMultiplePermissionRequest()
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)
+        ) {
             Text(text = "🛴 获取权限")
         }
     }
 }
 
 @Composable
-@OptIn(ExperimentalPermissionsApi::class)
 fun PermissionsNotAvailable() {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -485,9 +516,12 @@ fun PermissionsNotAvailable() {
         val ctx = LocalContext.current
         Text(text = "✋ 没有权限，无法访问本地相册！")
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            XXPermissions.startPermissionActivity(ctx, permissions)
-        }, colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)) {
+        Button(
+            onClick = {
+                XXPermissions.startPermissionActivity(ctx, permissions)
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = ConfigContent.current.backgroundColor)
+        ) {
             Text(text = "🚴‍♀️ 获取权限")
         }
     }

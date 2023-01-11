@@ -1,6 +1,5 @@
 package com.origeek.imagePicker.ui
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
@@ -20,8 +19,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,66 +34,84 @@ import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.NO_LIMIT
-import com.origeek.imagePicker.model.PhotoQueryEntity
-import com.origeek.imagePicker.util.findWindow
-import com.origeek.imagePicker.util.hideSystemUI
-import com.origeek.imagePicker.util.showSystemUI
-import com.origeek.imageViewer.ImagePreviewer
-import com.origeek.imageViewer.ImagePreviewerState
-import com.origeek.imageViewer.ImageViewerState
+import com.origeek.imagePicker.domain.model.PhotoQueryEntity
+import com.origeek.imageViewer.previewer.ImagePreviewer
+import com.origeek.imageViewer.previewer.ImagePreviewerState
+import com.origeek.imageViewer.previewer.TransformItemState
+import com.origeek.imageViewer.previewer.rememberPreviewerState
+import com.origeek.imageViewer.viewer.ImageViewerState
+import com.origeek.ui.common.util.findWindow
+import com.origeek.ui.common.util.hideSystemUI
+import com.origeek.ui.common.util.showSystemUI
 import kotlinx.coroutines.launch
 
-class PickerPreviewerState(
-    // 默认页码
-    index: Int = 0,
-    // 默认显示标识
-    show: Boolean = false,
-) {
+class PickerPreviewerState internal constructor() {
 
     // 当前页码
     val index: Int
-        get() = state.index
+        get() = state.currentPage
 
     // 当前显示标识
-    val show: Boolean
-        get() = state.show
+    val visible: Boolean
+        get() = state.visible
+
+    // 当前显示的目标标识
+    val visibleTarget: Boolean?
+        get() = state.visibleTarget
+
+    // 是否支持关闭
+    val canClose: Boolean
+        get() = state.canClose
+
+    // 是否正在执行动画
+    val animating: Boolean
+        get() = state.animating
+
+    var getKey: ((Int) -> Any)? = null
 
     // 预览组件状态
-    internal val state: ImagePreviewerState =
-        ImagePreviewerState(index, show)
+    internal lateinit var state: ImagePreviewerState
 
-    fun show(index: Int) {
-        state.show(index)
+    internal val currentViewerState: ImageViewerState?
+        get() = state.imageViewerState
+
+    private var isOpenTransform: Boolean = false
+
+    fun clearTransformItems() = state.clearTransformItems()
+
+    suspend fun show(index: Int, itemState: TransformItemState?) {
+        isOpenTransform = itemState != null
+        if (itemState != null) {
+            state.openTransform(index, itemState)
+        } else {
+            state.open(index)
+        }
     }
 
-    fun hide() {
-        state.hide()
+    suspend fun hide() {
+        if (getKey != null && isOpenTransform) {
+            state.closeTransform()
+        } else {
+            state.close()
+        }
     }
 
-    fun scroll(index: Int) {
-        state.scrollTo(index)
-    }
-
-    companion object {
-        val SAVER: Saver<PickerPreviewerState, *> = listSaver(save = {
-            listOf(
-                it.index,
-                it.show
-            ) as List<Any>
-        }, restore = {
-            PickerPreviewerState(
-                index = it[0] as Int,
-                show = it[1] as Boolean,
-            )
-        })
+    suspend fun scroll(index: Int) {
+        state.animateScrollToPage(index)
     }
 }
 
 @Composable
-fun rememberPickerPreviewerState(): PickerPreviewerState =
-    rememberSaveable(saver = PickerPreviewerState.SAVER) {
-        PickerPreviewerState()
+fun rememberPickerPreviewerState(getKey: (Int) -> Any): PickerPreviewerState {
+    val previewerState = rememberPreviewerState(enableVerticalDrag = true) {
+        getKey(it)
     }
+    val pickerState = remember { PickerPreviewerState() }
+    pickerState.getKey = getKey
+    pickerState.state = previewerState
+    return pickerState
+}
+
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -106,85 +121,101 @@ fun PickerPreviewer(
     filled: Boolean,
     previewListMode: PreviewListMode,
     imageLoader: @Composable (model: Any) -> Painter,
-    hugeImageLoader: @Composable (path: String) -> Any,
+    hugeImageLoader: @Composable (path: String) -> Any?,
     showList: List<PhotoQueryEntity>,
     checkList: List<PhotoQueryEntity>,
     onCheck: (PhotoQueryEntity, Boolean) -> Unit,
     commit: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val window = LocalContext.current.findWindow()
     var fullScreen by rememberSaveable { mutableStateOf(false) }
-    var imageState by remember { mutableStateOf<ImageViewerState?>(null) }
     var scale by remember { mutableStateOf(1F) }
-    LaunchedEffect(key1 = imageState?.scale?.value) {
-        imageState?.let {
+    LaunchedEffect(key1 = previewerState.currentViewerState?.scale?.value) {
+        previewerState.currentViewerState?.let {
             if (it.scale.value > scale && it.scale.value > 1F) {
                 fullScreen = true
             }
             scale = it.scale.value
         }
     }
-    BackHandler(fullScreen || previewerState.show) {
+    if (fullScreen || previewerState.canClose || previewerState.animating) BackHandler {
         if (fullScreen) {
             fullScreen = false
+        } else if (previewerState.canClose) {
+            scope.launch {
+                previewerState.hide()
+            }
+        }
+    }
+    LaunchedEffect(fullScreen) {
+        if (window == null) return@LaunchedEffect
+        if (fullScreen) {
+            hideSystemUI(window)
         } else {
-            previewerState.hide()
+            showSystemUI(window)
+        }
+    }
+    LaunchedEffect(previewerState.visibleTarget) {
+        if (window == null) return@LaunchedEffect
+        if (previewerState.visibleTarget == false) {
+            fullScreen = false
         }
     }
     ImagePreviewer(
         count = showList.size,
         state = previewerState.state,
-        backHandlerEnable = false,
         imageLoader = {
             hugeImageLoader(showList[it].path ?: "")
         },
-        onTap = {
-            fullScreen = !fullScreen
+        detectGesture = {
+            onTap = {
+                fullScreen = !fullScreen
+            }
         },
-        foreground = { size, page ->
-            Log.i("TAG", "PickerPreviewer: size - page $size - $page")
-            Log.i("TAG", "PickerPreviewer: previewerState.index ${previewerState.index}")
-            PreviewForeground(
-                // 这里的page必须用目标的page
-                index = previewerState.index,
-                size = size,
-                limit = limit,
-                filled = filled,
-                showList = showList,
-                checkList = checkList,
-                previewListMode = previewListMode,
-                fullScreen = fullScreen,
-                imageLoader = imageLoader,
-                onBack = {
-                    previewerState.hide()
-                },
-                commit = commit,
-                onCheck = onCheck,
-                onPreviewItemClick = {
-                    val index = showList.indexOf(it)
-                    if (index == -1) return@PreviewForeground
-                    scope.launch {
-                        previewerState.scroll(index)
+        previewerLayer = {
+            foreground = { page ->
+                PreviewForeground(
+                    // 这里的page必须用目标的page
+                    index = previewerState.index,
+                    size = showList.size,
+                    limit = limit,
+                    filled = filled,
+                    showList = showList,
+                    checkList = checkList,
+                    previewListMode = previewListMode,
+                    fullScreen = fullScreen,
+                    imageLoader = imageLoader,
+                    onBack = {
+                        scope.launch {
+                            previewerState.hide()
+                        }
+                    },
+                    commit = commit,
+                    onCheck = onCheck,
+                    onPreviewItemClick = {
+                        val index = showList.indexOf(it)
+                        if (index == -1) return@PreviewForeground
+                        scope.launch {
+                            previewerState.scroll(index)
+                        }
                     }
-                }
-            )
-        },
-        background = { _, _ ->
-            val backgroundColor by animateColorAsState(
-                targetValue = if (fullScreen) {
-                    ConfigContent.current.backgroundColorDark
-                } else {
-                    ConfigContent.current.backgroundColor
-                }
-            )
-            Box(
-                modifier = Modifier
-                    .background(backgroundColor)
-                    .fillMaxSize()
-            )
-        },
-        currentViewerState = {
-            imageState = it
+                )
+            }
+            background = {
+                val backgroundColor by animateColorAsState(
+                    targetValue = if (fullScreen) {
+                        ConfigContent.current.backgroundColorDark
+                    } else {
+                        ConfigContent.current.backgroundColor
+                    }
+                )
+                Box(
+                    modifier = Modifier
+                        .background(backgroundColor)
+                        .fillMaxSize()
+                )
+            }
         },
         exit = fadeOut(animationSpec = spring(stiffness = 1000F))
                 + scaleOut(
@@ -215,15 +246,6 @@ fun PreviewForeground(
     }
     val page = if (index > showList.size - 1) showList.size - 1 else index
     val currentItem = showList[page]
-    val window = LocalContext.current.findWindow()
-    LaunchedEffect(key1 = fullScreen) {
-        if (window == null) return@LaunchedEffect
-        if (fullScreen) {
-            hideSystemUI(window)
-        } else {
-            showSystemUI(window)
-        }
-    }
     Column(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = !fullScreen,

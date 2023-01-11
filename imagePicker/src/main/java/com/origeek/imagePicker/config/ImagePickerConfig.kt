@@ -2,12 +2,9 @@ package com.origeek.imagePicker.config
 
 import android.os.Parcel
 import android.os.Parcelable
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import org.intellij.lang.annotations.JdkConstants
 
 const val NO_LIMIT = -1
 

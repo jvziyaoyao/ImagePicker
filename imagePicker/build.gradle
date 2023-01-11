@@ -6,8 +6,8 @@ plugins {
 
 def GROUP_NAME = 'com.github.jvziyaoyao'
 def ARTIFACT_NAME = 'image-picker'
-def VERSION_CODE = 1
-def VERSION_NAME = '1.0.1-alpha.1'
+def VERSION_CODE = 2
+def VERSION_NAME = '1.0.2-alpha.1'
 
 group GROUP_NAME
 version VERSION_NAME
@@ -67,7 +67,10 @@ android {
 }
 
 dependencies {
-    implementation 'com.github.jvziyaoyao:ImageViewer:1.0.1-alpha.2'
+    implementation "com.github.jvziyaoyao:ImageViewer:$image_viewer_version"
+    implementation "com.github.jvziyaoyao:OrigeekUI:$origeek_ui_version"
+
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
 
     implementation 'io.coil-kt:coil:2.0.0-rc03'
     implementation 'io.coil-kt:coil-svg:2.0.0-rc03'

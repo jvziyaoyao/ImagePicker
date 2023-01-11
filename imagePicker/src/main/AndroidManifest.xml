@@ -5,7 +5,9 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application android:requestLegacyExternalStorage="true">
-        <activity android:name="com.origeek.imagePicker.activity.PickerActivity"/>
+        <activity
+            android:name="com.origeek.imagePicker.activity.PickerActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

@@ -1,134 +1,157 @@
 package com.origeek.pickerDemo
 
 import android.os.Bundle
-import android.util.Log
-import android.view.Window
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.google.accompanist.insets.statusBarsPadding
 import com.origeek.imagePicker.config.ImagePickerConfig
-import com.origeek.imagePicker.config.launch
 import com.origeek.imagePicker.config.registerImagePicker
-import com.origeek.imagePicker.ui.GridLayout
-import com.origeek.imagePicker.util.rememberCoilImagePainter
-import com.origeek.imagePicker.util.rememberHugeImagePainter
-import com.origeek.imageViewer.ImagePreviewer
-import com.origeek.imageViewer.rememberPreviewerState
+import com.origeek.imagePicker.ui.rememberCoilImagePainter
+import com.origeek.imagePicker.ui.rememberHugeImagePainter
+import com.origeek.imageViewer.previewer.ImagePreviewer
+import com.origeek.imageViewer.previewer.TransformImageView
+import com.origeek.imageViewer.previewer.rememberPreviewerState
+import com.origeek.imageViewer.previewer.rememberTransformItemState
 import com.origeek.pickerDemo.base.BaseActivity
-import com.origeek.pickerDemo.ui.theme.ImageViewerTheme
+import com.origeek.ui.common.compose.LazyGridLayout
+import com.origeek.ui.common.compose.ScaleGrid
+import com.origeek.ui.common.util.findWindow
+import com.origeek.ui.common.util.hideSystemUI
+import com.origeek.ui.common.util.showSystemUI
+import kotlinx.coroutines.launch
+import java.util.*
+import java.util.stream.Collectors
 
-const val SYSTEM_UI_VISIBILITY = "SYSTEM_UI_VISIBILITY"
+data class SelectedImage(
+    val id: String,
+    val path: String,
+)
 
 class SelectorActivity : BaseActivity() {
 
-    private var systemUIVisible = true
-
-    private val selectedList = mutableStateListOf<String>()
+    private val viewModel by viewModels<SelectorViewModel>()
 
     private val launcher = registerImagePicker { paths ->
-        paths?.let { selectedList.addAll(it) }
+        paths?.let {
+            val resultList = paths.stream().map {
+                SelectedImage(
+                    id = UUID.randomUUID().toString(),
+                    path = it,
+                )
+            }.collect(Collectors.toList())
+            viewModel.addList(resultList)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setBasicContent {
-            ImageViewerTheme {
-                SelectorBody(
-                    list = selectedList,
-                    onImageViewVisible = {
-                        handlerSystemUI(!it)
-                    }
-                ) {
-                    val config = ImagePickerConfig(
-                        limit = 9,
-                        navTitle = "好家伙",
-                    )
-                    launcher.launch(config)
-                }
+            SelectorBody(
+                list = viewModel.selectedList,
+            ) {
+                val config = ImagePickerConfig(
+                    limit = 9,
+                    navTitle = "好家伙",
+                )
+                launcher.launch(config)
             }
-        }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean(SYSTEM_UI_VISIBILITY, systemUIVisible)
-        super.onSaveInstanceState(outState)
-    }
-
-    private fun handlerSystemUI(visible: Boolean) {
-        systemUIVisible = visible
-        if (systemUIVisible) {
-            showSystemUI(window)
-        } else {
-            hideSystemUI(window)
         }
     }
 
 }
 
+val backgroundColor = Color(0xFFF4F4F4)
+val gridMaskerColor = Color(0x0F000000)
+
 @Composable
 fun SelectorBody(
-    list: List<String>,
-    onImageViewVisible: (Boolean) -> Unit = {},
+    list: List<SelectedImage>,
     goPicker: () -> Unit,
 ) {
-    val imageViewerState = rememberPreviewerState()
-    LaunchedEffect(key1 = imageViewerState.show, block = {
-        onImageViewVisible(imageViewerState.show)
+    val scope = rememberCoroutineScope()
+    var currentPage by remember { mutableStateOf(0) }
+    val getKey: () -> Any = { list[currentPage].id }
+    val imageViewerState = rememberPreviewerState(enableVerticalDrag = true) { getKey() }
+    val window = LocalContext.current.findWindow()
+    LaunchedEffect(imageViewerState.currentPage) {
+        currentPage = imageViewerState.currentPage
+    }
+    LaunchedEffect(key1 = imageViewerState.visibleTarget, block = {
+        if (window != null) {
+            if (imageViewerState.visibleTarget == true) {
+                hideSystemUI(window)
+            } else if (imageViewerState.visibleTarget == false) {
+                showSystemUI(window)
+            }
+        }
     })
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
+            .background(backgroundColor)
             .systemBarsPadding()
             .statusBarsPadding()
     ) {
-        val lineCount = 4
+        val lineCount = if (maxWidth > maxHeight) 8 else 4
         val p = 0.6.dp
-        GridLayout(
+        LazyGridLayout(
+            modifier = Modifier.fillMaxSize(),
             columns = lineCount,
             size = list.size,
+            padding = p,
         ) { index ->
-            val path = list[index]
+            val selectedImage = list[index]
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .padding(
-                        bottom = p * 2,
-                        start = if (index % lineCount == 0) 0.dp else p,
-                        end = if (index % lineCount == lineCount - 1) 0.dp else p
-                    )
+                    .aspectRatio(1f),
+                contentAlignment = Alignment.Center,
             ) {
-                Image(
+                val itemState = rememberTransformItemState()
+                ScaleGrid(onTap = {
+                    scope.launch {
+                        imageViewerState.openTransform(index, itemState)
+                    }
+                }) {
+                    TransformImageView(
+                        itemState = itemState,
+                        previewerState = imageViewerState,
+                        painter = rememberCoilImagePainter(path = selectedImage.path),
+                        key = selectedImage.id
+                    )
+                }
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clickable {
-                            imageViewerState.show(index)
-                        }
-                        .fillMaxSize(),
-                    painter = rememberCoilImagePainter(path = path),
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null,
+                        .background(gridMaskerColor)
                 )
             }
         }
     }
-    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+    if (list.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = "🙌 空空如也")
+        }
+    }
+    ConstraintLayout(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+    ) {
         val (add) = createRefs()
         FloatingActionButton(
             onClick = {
@@ -147,26 +170,15 @@ fun SelectorBody(
         count = list.size,
         state = imageViewerState,
         imageLoader = { index ->
-            rememberHugeImagePainter(path = list[index])
-                ?: rememberCoilImagePainter(path = list[index])
+            val path = list[index].path
+            rememberHugeImagePainter(path = path)
         },
-        onTap = {
-            imageViewerState.hide()
-        }
+        detectGesture = {
+            onTap = {
+                scope.launch {
+                    imageViewerState.closeTransform()
+                }
+            }
+        },
     )
-}
-
-fun hideSystemUI(window: Window) {
-    WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-        controller.hide(WindowInsetsCompat.Type.systemBars())
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-    }
-}
-
-fun showSystemUI(window: Window) {
-    WindowInsetsControllerCompat(
-        window,
-        window.decorView
-    ).show(WindowInsetsCompat.Type.systemBars())
 }
