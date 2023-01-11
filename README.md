@@ -1,8 +1,6 @@
 # ImagePicker
 🌆 ImagePicker for Jetpack Compose.
 
-中文介绍 | [English](/README_en.md)
-
 一款基于 [jvziyaoyao/ImageViewer](https://github.com/jvziyaoyao/ImageViewer) 组件并且完全使用Jekpack Compose开发的图片选择库
 
 [![](https://www.jitpack.io/v/jvziyaoyao/ImagePicker.svg)](https://www.jitpack.io/#jvziyaoyao/ImagePicker)
