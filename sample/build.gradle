@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    compileSdk 31
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.origeek.pickerDemo"
         minSdk 24
-        targetSdk 31
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -45,6 +45,7 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+    namespace 'com.origeek.pickerDemo'
 }
 
 dependencies {
